@@ -435,6 +435,20 @@ describe("the render CLI", () => {
     }
   });
 
+  it("writes a PDF, or says plainly that it needs Chrome", () => {
+    const r = run(["--target", "pdf"]);
+    assert.equal(r.status, 0, r.stderr);
+    const out = JSON.parse(r.stdout);
+    if (out.path) {
+      assert.ok(existsSync(out.path));
+      assert.ok(readFileSync(out.path).slice(0, 4).toString() === "%PDF", "that file is not a PDF");
+    } else {
+      // No Chrome on this machine. The HTML render still succeeded and the
+      // reason is stated, rather than the whole render failing.
+      assert.ok(out.warnings.some((w) => /Chrome/.test(w)), JSON.stringify(out));
+    }
+  });
+
   it("reads the theme from cv/theme and takes --theme over it", () => {
     writeFileSync(join(home, "cv", "theme"), "compact\n", "utf8");
     assert.equal(JSON.parse(run(["--target", "html"]).stdout).theme, "compact");
