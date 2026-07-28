@@ -53,9 +53,10 @@ node "$CLAUDE_PLUGIN_ROOT/engine/render.mjs" --target pdf     # if the workspace
 node "$CLAUDE_PLUGIN_ROOT/engine/render.mjs" --target brief   # outputs/brief.md, read at every send
 ```
 
-`render.mjs` runs the hidden-text lint before it emits. If it exits 422 naming a selector, the
+`render.mjs` runs the hidden-text lint before it emits. If it **exits 3** naming a selector, the
 template is trying to hide text from a human reader while showing it to a screener. Fix the
-template. Do not pass the lint a flag.
+template. Do not pass the lint a flag. (The JSON on stdout carries `"status": 422`; the process
+exit code is 3. Exit codes are taken mod 256, so 422 would arrive as 166.)
 
 ### 4. Check what already quoted the old fact
 

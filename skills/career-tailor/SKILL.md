@@ -75,9 +75,11 @@ grep -A1 '^cv:' "$CAREER_HOME/rules.yaml"
   ```bash
   node "$CLAUDE_PLUGIN_ROOT/engine/render.mjs" --target pdf --theme "$(cat "$CAREER_HOME/cv/theme")" --emphasis <section-ids>
   ```
-  Emphasis reorders and trims sections. It never adds a claim, and `render.mjs` runs the hidden-text
-  lint before emitting. If the lint exits 422 naming a selector, the theme is trying to hide text
-  from a human while showing it to a screener. Fix the theme.
+  Emphasis reorders sections and drops non-CV ones. It never adds a claim and never drops a role.
+  `render.mjs` runs the hidden-text lint before emitting. If it **exits 3** naming a selector, the
+  theme is trying to hide text from a human while showing it to a screener. Fix the theme.
+  (The JSON on stdout carries `"status": 422`; the process exit code is 3. Exit codes are taken
+  mod 256, so 422 would arrive as 166.)
 
 This is config and not a hardcoded answer because it is a real preference split. One canonical CV
 per person is faster and consistent; a per-role CV wins where a screener scores the document itself.

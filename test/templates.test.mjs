@@ -230,13 +230,14 @@ test("knowledge-base.scaffold.md carries the heading scheme and the three marker
                    "## 3. Company and Product Context", "## 4. Experience",
                    "## 5. Prior Roles", "## 6. Education",
                    "## 7. Skills and Tags Matrix", "### 7.1 Trending keyword bank",
-                   "## 8. Reusable Achievement Bullets", "## 9. Open Items to Confirm"]) {
+                   "## 8. Achievement bank", "## 9. Open Items to Confirm",
+                   "## 10. Gaps and how to frame them"]) {
     assert.ok(kb.includes(h), `scaffold is missing heading: ${h}`);
   }
   for (const marker of ["[[FILL", "confirm", "(internal)", "(public)"]) {
     assert.ok(kb.includes(marker), `scaffold is missing the ${marker} convention`);
   }
-  assert.ok(kb.includes('"How I work" - framing variants'),
+  assert.ok(kb.includes('Framing variants - the "How I work"'),
     "the framing variants must live in the knowledge base and be rendered, never pasted into a template");
 });
 

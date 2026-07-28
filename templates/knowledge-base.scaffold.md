@@ -75,7 +75,7 @@ Two or three, so tailoring picks rather than invents.
 
 `[[FILL]]`
 
-### "How I work" - framing variants (audience switch)
+### Framing variants - the "How I work" audience switch
 
 <!--
   These variants MUST live here and be rendered. Never copy-paste them into a
@@ -213,7 +213,7 @@ not for claiming skills you do not have. A keyword you cannot back from section
 
 ---
 
-## 8. Reusable Achievement Bullets (quantified)
+## 8. Achievement bank (quantified, reusable)
 
 Pre-written, quantified, ready to drop into a tailored CV or email. Write them
 once here, in final form, so tailoring becomes selection instead of composition.
@@ -238,3 +238,33 @@ nobody sees.
    profile.
 3. Decide the narrative lead: which single story opens a tailored application.
 4. `(internal)` audit: check nothing marked internal has reached an artifact.
+
+---
+
+## 10. Gaps and how to frame them
+
+The things postings ask for that you cannot honestly claim, and the one true
+sentence you say about each. Written once, here, so the answer is the same
+every time instead of improvised per application.
+
+This section exists because the alternative is worse in both directions. With
+nothing written down, a tailored draft either invents a claim to fill the gap,
+or goes silent about it and leaves the reader to assume the worst. A prepared
+line does neither.
+
+Write each as: the gap, then the honest framing. Never a spin, never an excuse.
+Admitting a gap plainly is what makes the confident parts land.
+
+- **`[[FILL: something a posting keeps asking for]]`** - `[[FILL: the true
+  sentence. For example "I do not have big open-source contributions" or "I
+  have not run a team larger than five"]]`
+- **`[[FILL: a second one]]`** - `[[FILL: its honest framing]]`
+
+Two rules for what goes here:
+
+1. **A gap is not a weakness to hide, it is an answer to prepare.** If the
+   honest framing is genuinely damaging for a whole category of role, that is
+   information about which roles to target, not a line to soften.
+2. **Never resolve a gap by widening a claim elsewhere.** If a posting wants
+   five years of something you have two years of, the fix is this section, not
+   an edit to section 4.
