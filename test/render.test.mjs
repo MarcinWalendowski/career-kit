@@ -332,6 +332,43 @@ describe("applyAnchorEdit", () => {
     assert.ok(next.includes("Cut the punch-card cycle"), "a neighbouring line was clobbered");
     assert.equal(next.split("\n").length, commented.split("\n").length);
   });
+
+  // The line-range splice is the other way a comment can be lost, and it is
+  // silent: the previewer masks the comment, so the edit comes back without it
+  // and overwrites the whole line. Nothing in the UI could show the user that
+  // their own note went missing from the file every claim is checked against.
+  it("keeps a comment that shares a line with the bullet being edited", () => {
+    const commented = KB.replace(
+      "- Shipped",
+      "- <!-- confirm this against the logbook --> Shipped",
+    );
+    const { anchors } = documentFromMarkdown(commented);
+    const bullet = anchors.find((a) => a.text.includes("Shipped"));
+    const next = applyAnchorEdit(commented, anchors, bullet.aid, "Shipped the first program");
+
+    assert.ok(next.includes("- Shipped the first program"), "the edit did not land");
+    assert.ok(
+      next.includes("<!-- confirm this against the logbook -->"),
+      "the edit deleted the user's own note from the knowledge base",
+    );
+    assert.equal(next.split("\n").length, commented.split("\n").length);
+  });
+
+  it("does not duplicate a comment the editor typed back in", () => {
+    const commented = KB.replace("- Shipped", "- Shipped <!-- note -->");
+    const { anchors } = documentFromMarkdown(commented);
+    const bullet = anchors.find((a) => a.text.startsWith("Shipped"));
+    const next = applyAnchorEdit(commented, anchors, bullet.aid, "Shipped it <!-- note -->");
+    assert.equal(next.match(/<!-- note -->/g).length, 1);
+  });
+
+  it("leaves an ordinary edit byte-identical, with no trailing space", () => {
+    const { anchors } = documentFromMarkdown(KB);
+    const bullet = anchors.find((a) => a.text.startsWith("Shipped"));
+    const next = applyAnchorEdit(KB, anchors, bullet.aid, "Shipped the first program");
+    assert.ok(next.includes("- Shipped the first program\n"));
+    assert.ok(!/ \n/.test(next), "an edit introduced trailing whitespace");
+  });
 });
 
 describe("parseColor", () => {

@@ -1094,9 +1094,34 @@ function renderTable(src) {
   return `<table class="cv-table"><thead><tr>${th}</tr></thead><tbody>\n${tr}\n</tbody></table>`;
 }
 
+/** Every HTML comment in a span of text, markers included, in order. */
+export function collectHtmlComments(text) {
+  const found = [];
+  const src = String(text || "");
+  let i = 0;
+  for (;;) {
+    const open = src.indexOf("<!--", i);
+    if (open < 0) break;
+    const close = src.indexOf("-->", open + 4);
+    // An unterminated comment still swallowed the rest of the source, so it is
+    // still text the user would lose.
+    found.push(close < 0 ? src.slice(open) : src.slice(open, close + 3));
+    i = close < 0 ? src.length : close + 3;
+  }
+  return found;
+}
+
 /**
  * Write an edited anchor back into the knowledge base source, preserving the
  * markdown marker the block started with.
+ *
+ * The masking pass keeps comments out of what the previewer renders, so an
+ * edit comes back without them. This splices whole lines, which means a comment
+ * sharing a line with an edited bullet would be dropped from the knowledge base
+ * by an edit that never mentioned it. Nothing would surface that: the previewer
+ * cannot show it, and the file it happens in is the one every claim is checked
+ * against. So carry any comment on the replaced lines through to the end of the
+ * edit. The position is normalised, the text is never lost.
  */
 export function applyAnchorEdit(kbText, anchors, aid, newText) {
   const a = anchors.find((x) => x.aid === aid);
@@ -1105,6 +1130,15 @@ export function applyAnchorEdit(kbText, anchors, aid, newText) {
   const parts = String(newText).replace(/\r/g, "").split("\n");
   const pad = a.prefix.replace(/\S/g, " ");
   const replacement = parts.map((p, idx) => (idx === 0 ? a.prefix + p : (a.kind === "quote" ? a.prefix : pad) + p));
+  // Inside a fenced block a comment is content, and it is already in newText.
+  if (a.kind !== "code") {
+    const original = lines.slice(a.start, a.end + 1).join("\n");
+    const orphaned = collectHtmlComments(original).filter((c) => !newText.includes(c));
+    if (orphaned.length) {
+      const last = replacement.length - 1;
+      replacement[last] = `${replacement[last]} ${orphaned.join(" ")}`.replace(/\s+$/, "");
+    }
+  }
   lines.splice(a.start, a.end - a.start + 1, ...replacement);
   return lines.join("\n");
 }
