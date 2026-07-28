@@ -49,6 +49,8 @@ in that spot.
 | `.edu-item` / `.edu-item .sub` | Education entry and its second line. |
 | `.skills p` / `.skills b` | Skills paragraphs and their area labels. |
 | `a` (print) | Link colour in the print block. |
+| `table.cv-table` | A table from the knowledge base. **Renderer-owned:** `render.mjs` ships base styles for it so a table is never unstyled. A theme may override; neither shipped theme does. |
+| `.group` | A structural wrapper around a heading and the block under it, carrying the `data-anno-item` hook the previewer anchors to. Deliberately unstyled: it exists to be selected, not to be seen. Style it only if the layout needs it. |
 
 The seven custom properties: `--ink`, `--muted`, `--accent`, `--accent-soft`,
 `--rule`, `--bg`, `--maxw`.

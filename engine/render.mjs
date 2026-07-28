@@ -1638,17 +1638,16 @@ function truthy(v) {
  *
  * The import is dynamic and guarded: a second YAML parser in this file would
  * be a second answer to the same question, which is the duplication this whole
- * product exists to remove. If validate.mjs cannot be loaded the brief renders
- * with [[FILL]] markers naming the file, which is honest, rather than with a
- * best guess.
+ * product exists to remove. readYaml owns the missing-file behaviour too, so a
+ * brief asked for without a profile exits 2 with the career-setup message,
+ * the same way the gate does.
  */
-async function readWorkspaceYaml(file) {
-  if (!existsSync(file)) return null;
+async function readWorkspaceYaml(file, required) {
   try {
-    const { parseYaml } = await import("./validate.mjs");
-    return parseYaml(readFileSync(file, "utf8"), { name: file });
+    const { readYaml } = await import("./validate.mjs");
+    return readYaml(file, { required, fallback: null });
   } catch {
-    return null;
+    return existsSync(file) ? null : null;
   }
 }
 
@@ -1658,8 +1657,9 @@ export async function renderBrief(P, opts = {}) {
   if (!existsSync(templatePath)) {
     throw Object.assign(new Error(`brief template not found at ${templatePath}`), { code: "NO_TEMPLATE" });
   }
-  const profile = await readWorkspaceYaml(P.profile);
-  const rules = await readWorkspaceYaml(P.rules);
+  const required = opts.required !== false;
+  const profile = await readWorkspaceYaml(P.profile, required);
+  const rules = await readWorkspaceYaml(P.rules, required);
   const mode = (rules && rules.mode) || "";
   const ctx = {
     profile: profile || {},

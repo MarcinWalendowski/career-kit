@@ -230,10 +230,13 @@ export async function startServer(options = {}) {
     return want.includes(String(headerHost || "").toLowerCase());
   };
 
+  // Any extension origin, never a fixed id. An unpacked extension gets a new
+  // id on every install, so pinning one would break the first thing a new user
+  // does, and pinning it buys nothing: an id is not a secret and the token is
+  // what actually authorises the call.
   const originAllowed = (origin) => {
     if (!origin) return false;
-    if (/^chrome-extension:\/\/[a-p]{32}$/i.test(origin)) return true;
-    if (/^(moz-)?extension:\/\/[\w-]+$/i.test(origin)) return true;
+    if (/^(chrome|moz|safari-web)-extension:\/\/[\w-]+$/i.test(origin)) return true;
     return [`http://127.0.0.1:${state.port}`, `http://localhost:${state.port}`].includes(origin.toLowerCase());
   };
 
@@ -442,19 +445,41 @@ export async function startServer(options = {}) {
       if (!body.source) return send(res, 400, { error: "source is required" });
 
       // Captures land in jobs/inbox/ and never in jobs/. A record only leaves
-      // the inbox once triage has resolved its apply route and identity.
+      // the inbox once triage has resolved its apply route and identity, which
+      // is why the channel is "none" here rather than a guess from the page.
       mkdirSync(P.jobsInbox, { recursive: true });
       const now = new Date().toISOString();
       const written = [];
+      const skipped = [];
       jobs.forEach((job, i) => {
-        if (!job || typeof job !== "object") return;
+        if (!job || typeof job !== "object") {
+          skipped.push({ index: i, reason: "not-an-object" });
+          return;
+        }
         const id = ingestId(job, i);
-        const record = { ...job, id, source: job.source || body.source, status: "discovered", discovered_at: job.discovered_at || now, captured_at: now };
+        const record = {
+          ...job,
+          id,
+          source: job.source || body.source,
+          url: job.url || body.url || null,
+          apply: { channel: "none", ...(job.apply || {}) },
+          status: "discovered",
+          discovered_at: job.discovered_at || now,
+          captured_at: now,
+        };
         writeFileSync(join(P.jobsInbox, `${id}.json`), JSON.stringify(record, null, 2) + "\n", "utf8");
         written.push(id);
       });
-      const headers = originAllowed(origin) ? { "Access-Control-Allow-Origin": origin } : {};
-      return send(res, 200, { ok: true, ingested: written.length, ids: written, dir: P.jobsInbox }, headers);
+      const headers = { "Access-Control-Allow-Origin": origin };
+      return send(res, 200, {
+        ok: true,
+        written: written.length,
+        skipped: skipped.length,
+        ingested: written.length,
+        ids: written,
+        skippedDetail: skipped,
+        dir: P.jobsInbox,
+      }, headers);
     }
 
     return send(res, 404, { error: "no-such-route", path, method });

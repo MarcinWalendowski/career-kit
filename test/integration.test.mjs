@@ -283,6 +283,45 @@ test("every engine command a skill emits actually exists", () => {
   assert.ok(seen.size >= 6, `expected to find engine invocations in the skills, found ${seen.size}`);
 });
 
+/* ---------------------------------- the theme docs describe the real output */
+
+test("every class the renderer emits is documented for theme authors", async () => {
+  // templates.test.mjs asserts the two THEMES agree with each other. Nothing
+  // asserted that either agrees with the RENDERER. A class the renderer emits
+  // but the README omits is a class a theme author never styles, and finds out
+  // about when a CV renders wrong.
+  //
+  // Match compound selectors too. `.role .co` and `.edu-item .sub` document
+  // `co` and `sub`; a check that only reads single tokens reports three false
+  // positives, which is how this test was nearly written wrong.
+  const { render } = await import(join(KIT, "engine/render.mjs"));
+  const kb = readFileSync(join(KIT, "templates/knowledge-base.scaffold.md"), "utf8");
+  const out = await render(kb, { theme: "default", target: "html" });
+
+  const emitted = new Set();
+  for (const m of out.html.matchAll(/class="([^"]+)"/g)) {
+    for (const c of m[1].split(/\s+/)) if (c) emitted.add(c);
+  }
+
+  // Strip fenced blocks before pairing inline backticks. A ``` fence otherwise
+  // pairs with the next stray backtick and swallows the table whole, which
+  // reports every class as undocumented and reads exactly like a real failure.
+  const readme = readFileSync(join(KIT, "templates/themes/default/README.md"), "utf8")
+    .replace(/```[\s\S]*?```/g, "");
+  const documented = new Set();
+  for (const m of readme.matchAll(/`([^`\n]+)`/g)) {
+    for (const c of m[1].matchAll(/\.([a-z][a-z0-9-]*)/g)) documented.add(c[1]);
+  }
+  assert.ok(documented.size > 10, `only parsed ${documented.size} documented classes; the extraction is broken, not the README`);
+
+  const undocumented = [...emitted].filter((c) => !documented.has(c)).sort();
+  assert.deepEqual(
+    undocumented,
+    [],
+    `the renderer emits classes no theme author is told about:\n  ${undocumented.join(", ")}`,
+  );
+});
+
 /* ------------------------------------ adapters must satisfy the job schema */
 
 test("every adapter emits records the validator accepts", async () => {

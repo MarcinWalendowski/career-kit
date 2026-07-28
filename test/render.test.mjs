@@ -8,7 +8,14 @@
  */
 
 import { strict as assert } from "node:assert";
-import { describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
+import { spawnSync } from "node:child_process";
+import {
+  copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   HiddenTextError, applyAnchorEdit, documentFromMarkdown, fitsOnePage,
   lintHidden, parseColor, render, renderTemplate, scopeCss, sectionBody,
@@ -373,6 +380,138 @@ describe("sectionBody", () => {
 
   it("returns an empty string for a heading that is not there", () => {
     assert.equal(sectionBody(md, "Three"), "");
+  });
+});
+
+/*
+ * The CLI, which four skills invoke six times.
+ *
+ * These are removal tests too. render.mjs was a library with no argv handling
+ * while the skills ran it as a command: node imported the module, defined some
+ * functions and exited 0, so every one of those calls looked like a success
+ * and wrote nothing. Exit 0 with no artifact is the failure shape being
+ * guarded against here, which is why each case asserts the file on disk and
+ * not just the status.
+ */
+describe("the render CLI", () => {
+  const CLI = fileURLToPath(new URL("../engine/render.mjs", import.meta.url));
+  const TPL = fileURLToPath(new URL("../templates/", import.meta.url));
+  let home;
+
+  const run = (args, env = {}) =>
+    spawnSync(process.execPath, [CLI, ...args], {
+      encoding: "utf8",
+      env: { ...process.env, CAREER_HOME: home, ...env },
+    });
+
+  before(() => {
+    // A scratch workspace built from the shipped templates alone. If this
+    // needs a plugin file edited, the de-personalisation seam is missing.
+    home = mkdtempSync(join(tmpdir(), "career-cli-"));
+    mkdirSync(join(home, "cv"), { recursive: true });
+    for (const [src, dest] of [
+      ["profile.example.yaml", "profile.yaml"],
+      ["rules.example.yaml", "rules.yaml"],
+      ["voice.example.md", "voice.md"],
+      ["knowledge-base.scaffold.md", "knowledge-base.md"],
+    ]) {
+      copyFileSync(join(TPL, src), join(home, dest));
+    }
+  });
+
+  after(() => {
+    if (home) rmSync(home, { recursive: true, force: true });
+  });
+
+  it("writes the artifact each target claims and prints where it went", () => {
+    for (const [target, file] of [["html", "cv.html"], ["md", "cv.md"], ["brief", "brief.md"]]) {
+      const r = run(["--target", target]);
+      assert.equal(r.status, 0, `${target} exited ${r.status}: ${r.stderr}`);
+      const out = JSON.parse(r.stdout);
+      assert.equal(out.ok, true);
+      assert.equal(out.path, join(home, "outputs", file));
+      assert.ok(existsSync(out.path), `${target} reported a path it did not write`);
+      assert.ok(readFileSync(out.path, "utf8").length > 200, `${target} wrote an empty artifact`);
+    }
+  });
+
+  it("reads the theme from cv/theme and takes --theme over it", () => {
+    writeFileSync(join(home, "cv", "theme"), "compact\n", "utf8");
+    assert.equal(JSON.parse(run(["--target", "html"]).stdout).theme, "compact");
+    assert.equal(JSON.parse(run(["--target", "html", "--theme", "default"]).stdout).theme, "default");
+    writeFileSync(join(home, "cv", "theme"), "default\n", "utf8");
+  });
+
+  it("honours --out", () => {
+    const out = join(home, "outputs", "somewhere-else.html");
+    const r = run(["--target", "html", "--out", out]);
+    assert.equal(r.status, 0);
+    assert.equal(JSON.parse(r.stdout).path, out);
+    assert.ok(existsSync(out));
+  });
+
+  it("fills the brief from profile.yaml and rules.yaml", () => {
+    const r = run(["--target", "brief"]);
+    assert.equal(r.status, 0);
+    const brief = readFileSync(join(home, "outputs", "brief.md"), "utf8");
+    const profile = readFileSync(join(home, "profile.yaml"), "utf8");
+    const email = /email:\s*(\S+)/.exec(profile)[1];
+    assert.ok(brief.includes(email), "the brief did not carry the profile email through");
+    assert.ok(brief.includes(home), "the brief did not resolve careerHome");
+    assert.ok(!brief.includes("{{"), "an unresolved placeholder reached the brief");
+    assert.ok(!/^<!--/.test(brief), "the template comment header was not stripped");
+  });
+
+  it("renders a placeholder that resolves to nothing as a FILL marker, never as empty", () => {
+    const template = join(home, "t.md");
+    writeFileSync(template, "Send from {{profile.mail.nosuchkey}}.\nVoice: {{voice:NoSuchHeading}}\n", "utf8");
+    // Same path the CLI takes, with a template that cannot resolve.
+    const script =
+      `import {renderBrief} from ${JSON.stringify(CLI)};` +
+      `import {paths} from ${JSON.stringify(fileURLToPath(new URL("../engine/paths.mjs", import.meta.url)))};` +
+      `const r = await renderBrief(paths(${JSON.stringify(home)}), {template: ${JSON.stringify(template)}});` +
+      `process.stdout.write(r.text);`;
+    const r = spawnSync(process.execPath, ["--input-type=module", "-e", script], { encoding: "utf8" });
+    assert.equal(r.status, 0, r.stderr);
+    assert.match(r.stdout, /\[\[FILL\]\] profile\.mail\.nosuchkey is missing from profile\.yaml/);
+    assert.match(r.stdout, /\[\[FILL\]\].*NoSuchHeading.*voice\.md/);
+    assert.ok(!/Send from \.$/m.test(r.stdout), "a missing value rendered as an empty string");
+  });
+
+  it("exits 3 and names the selector when the lint refuses, and writes nothing", () => {
+    mkdirSync(join(home, "cv", "themes", "sneaky"), { recursive: true });
+    writeFileSync(
+      join(home, "cv", "themes", "sneaky", "theme.css"),
+      ".page{background:#ffffff}\n.job li{color:#ffffff}\n",
+      "utf8",
+    );
+    const out = join(home, "outputs", "refused.html");
+    const r = run(["--target", "html", "--theme", "sneaky", "--out", out]);
+    assert.equal(r.status, 3, `expected exit 3, got ${r.status}`);
+    assert.match(r.stderr, /\.job li/);
+    assert.match(r.stderr, /no override/);
+    const payload = JSON.parse(r.stdout);
+    assert.equal(payload.status, 422);
+    assert.equal(payload.error, "hidden-text");
+    assert.ok(!existsSync(out), "a refused render still wrote a file");
+  });
+
+  it("exits 2 on an unknown target and on an unknown option", () => {
+    const bad = run(["--target", "docx"]);
+    assert.equal(bad.status, 2);
+    assert.match(bad.stderr, /unknown --target docx/);
+    assert.match(bad.stderr, /--target html\|md\|pdf\|brief/);
+
+    assert.equal(run(["--target", "html", "--wat"]).status, 2);
+  });
+
+  it("never exits 0 without writing something", () => {
+    const empty = mkdtempSync(join(tmpdir(), "career-empty-"));
+    writeFileSync(join(empty, "profile.yaml"), "name: Ada\n", "utf8");
+    const r = run(["--target", "html"], { CAREER_HOME: empty });
+    assert.notEqual(r.status, 0, "an empty knowledge base reported success");
+    assert.match(r.stderr, /knowledge base is empty|career-setup/);
+    rmSync(empty, { recursive: true, force: true });
   });
 });
 
