@@ -369,6 +369,37 @@ describe("applyAnchorEdit", () => {
     assert.ok(next.includes("- Shipped the first program\n"));
     assert.ok(!/ \n/.test(next), "an edit introduced trailing whitespace");
   });
+
+  // A comment that opens on the edited line and closes on the next one. Both
+  // lines are inside the replaced range, so the halves are collected together
+  // and reappended together. Unbalanced markers would comment out whatever
+  // followed, which in a knowledge base is the next person's evidence.
+  it("keeps the markers balanced when a comment opens on the edited line", () => {
+    const kb = "## Role\n\n- did a thing <!-- a note\n  that runs on -->\n- next bullet\n";
+    const { anchors } = documentFromMarkdown(kb);
+    const bullet = anchors.find((a) => a.text.includes("did a thing"));
+    const next = applyAnchorEdit(kb, anchors, bullet.aid, "did a thing well");
+
+    assert.equal((next.match(/<!--/g) || []).length, 1, "an opening marker was lost or doubled");
+    assert.equal((next.match(/-->/g) || []).length, 1, "a closing marker was lost or doubled");
+    assert.ok(next.includes("that runs on"), "the comment body was dropped");
+    assert.ok(next.includes("- next bullet"), "the bullet after the comment was clobbered");
+  });
+
+  // The no-duplicate filter rests on an assumption about a different module:
+  // the previewer hands back masked text, so the comment is re-collected and
+  // reappended once per edit rather than accumulating. Editing the same bullet
+  // is the common case, so a leak here would compound in the user's own file.
+  it("appends one copy across successive edits to the same bullet", () => {
+    let cur = "## Role\n\n- did a thing <!-- note -->\n";
+    for (let i = 1; i <= 3; i++) {
+      const { anchors } = documentFromMarkdown(cur);
+      const bullet = anchors.find((a) => a.text.includes("did a thing"));
+      cur = applyAnchorEdit(cur, anchors, bullet.aid, `did a thing v${i}`);
+    }
+    assert.equal((cur.match(/<!-- note -->/g) || []).length, 1, "the comment accumulated");
+    assert.ok(cur.includes("- did a thing v3 <!-- note -->"));
+  });
 });
 
 describe("parseColor", () => {
