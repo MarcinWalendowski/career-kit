@@ -56,7 +56,7 @@ the code is destroyed by an update.
 
 ```
 career-setup                        # provision ~/career, import a CV, set the mode
-career-kb  "add the Checkatrade RPS number"   # the only write path for facts
+career-kb  "add the CI cost saving from last quarter"  # the only write path for facts
 career-sources --query "founding engineer" --remote
 career-tailor <job-id>              # JD in, match report out
 career-apply  <job-id>              # drafts; sends only if the gate allows it

@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+#
+# pii-check - the blocking gate before this repo is pushed anywhere.
+#
+# The obvious sweep looks for a name, an email, a phone number, an address. That
+# sweep passed a README whose example named a real former employer, because an
+# employer is none of those four. Everything the workspace knows about you
+# is personal data, including who you worked for, and a usage example written
+# from memory is exactly where it gets out.
+#
+# So this asks the opposite question. It reads the private workspace, takes the
+# proper nouns that are distinctive to it, and reports any that also appear in a
+# tracked file here. The workspace is never copied into this repo, only compared
+# against it, and what it finds is printed to your terminal and nowhere else.
+#
+#   tools/pii-check                      # uses $CAREER_HOME, default ~/career
+#   CAREER_HOME=/path/to/ws tools/pii-check
+#
+# Exit 0 clean, 1 findings, 2 could not run. It fails closed: no workspace, no
+# dictionary, or no terms extracted all exit 2, because the one thing this must
+# never do is report a clean repo it did not actually check.
+
+set -uo pipefail
+cd "$(dirname "$0")/.." || exit 2
+
+WS="${CAREER_HOME:-$HOME/career}"
+DICT=/usr/share/dict/words
+
+[ -d "$WS" ] || { echo "pii-check: no workspace at $WS. Set CAREER_HOME." >&2; exit 2; }
+[ -r "$DICT" ] || { echo "pii-check: no dictionary at $DICT, cannot judge distinctiveness." >&2; exit 2; }
+
+# Terms that are meant to be here: this project's own vocabulary, the fictional
+# people and companies the fixtures use, the author's attribution, and ordinary
+# technical nouns that any repo would contain. A real employer or a real person
+# must never be added to this list. Fix the example instead.
+ALLOW="$(cat <<'EOF'
+Ada Lovelace Acme Northwind Harbourline Dana
+Marcin Walendowski MarcinWalendowski
+Career Kit Claude Code Node JavaScript GitHub GitLab Google Postgres
+LinkedIn Ashby Greenhouse Lever SmartRecruiters Recruitee Workable Wellfound
+Workday Indeed Typeform RemoteOK Remotive Arbeitnow Himalayas Algolia
+Chrome Gmail Fastmail Email Loopback WebFetch WebSocket
+Backend Frontend DevOps Systems Tools Skills Projects Repo Files Notes Drafts
+Roles Careers Hiring Applying Matches Users Languages Practices Conventions
+Guardrails Dedupe Enums Terms Startup Previewer Labs Earlier Strongest Writes
+Pre States Europe Germany London Positioning Identity Contact Evidence
+Verified Implemented Changed Committed Deployed Drafted Synced Migrated
+Integrated Managed Owned Orchestrated Improves Mitigated Localized Scheduled
+Suggested Archived Excluded Planning Offline Online Onsite Multi Has
+EOF
+)"
+ALLOW_RE="^($(printf '%s' "$ALLOW" | tr -s '[:space:]' '|' | sed 's/|$//'))$"
+
+# Proper nouns from the workspace's prose. Word-shaped only, so base64, message
+# ids and hashes in the state files do not become "terms". Twice or more, so a
+# one-off typo is not one either.
+TERMS="$(find "$WS" -type f \( -name '*.md' -o -name '*.yaml' -o -name '*.yml' -o -name '*.txt' \) \
+    -not -path '*/.git/*' 2>/dev/null \
+  | xargs grep -hoE '\b[A-Z][a-z]{2,}[A-Za-z]*\b' 2>/dev/null \
+  | sort | uniq -c | awk '$1 >= 2 { print $2 }' | sort -u \
+  | grep -vE "$ALLOW_RE")"
+
+[ -n "$TERMS" ] || { echo "pii-check: no terms extracted from $WS. Is it populated?" >&2; exit 2; }
+
+# Distinctive means "not an ordinary English word". A coined company name
+# survives this filter; a word like Summary does not.
+DISTINCT="$(join -v1 -t"$(printf '\t')" \
+  <(printf '%s\n' "$TERMS" | awk '{ print tolower($0) "\t" $0 }' | sort) \
+  <(tr '[:upper:]' '[:lower:]' < "$DICT" | sort -u) | cut -f2 | sort -u)"
+
+n_terms=$(printf '%s\n' "$DISTINCT" | grep -c . || true)
+echo "pii-check: $n_terms distinctive terms from $WS, against $(git ls-files | wc -l | tr -d ' ') tracked files"
+
+# Commit messages ship with the repo. The first version of this script checked
+# tracked files only and passed, while the very commit adding it spelled the
+# employer out in its own message. A push publishes git log too.
+LOG="$(git log --all --format='%H%n%B' 2>/dev/null)"
+
+found=0
+while IFS= read -r term; do
+  [ -z "$term" ] && continue
+  hits="$(git ls-files -z | xargs -0 grep -nwI -- "$term" 2>/dev/null)"
+  if [ -n "$hits" ]; then
+    found=1
+    printf '\nLEAK  %s\n' "$term"
+    printf '%s\n' "$hits" | sed 's/^/      /'
+  fi
+  if printf '%s' "$LOG" | grep -qw -- "$term"; then
+    found=1
+    printf '\nLEAK  %s  (in a commit message)\n' "$term"
+    git log --all --format='%h %s' --grep="$term" -i | sed 's/^/      /'
+    printf '      A push publishes history. Amend if it is HEAD, otherwise rewrite or squash.\n'
+  fi
+done <<< "$DISTINCT"
+
+if [ "$found" -eq 1 ]; then
+  cat <<'EOF'
+
+Blocked. Every line above puts something from your private workspace into a
+public repo. Rewrite the example with a fictional name. Only add a term to ALLOW
+in this script if it is genuinely generic - never a real employer or a real
+person, which is the case this exists to catch.
+EOF
+  exit 1
+fi
+
+echo "Clean. No distinctive workspace term appears in a tracked file."
+exit 0
