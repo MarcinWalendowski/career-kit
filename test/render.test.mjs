@@ -11,7 +11,7 @@ import { strict as assert } from "node:assert";
 import { describe, it } from "node:test";
 import {
   HiddenTextError, applyAnchorEdit, documentFromMarkdown, fitsOnePage,
-  lintHidden, parseColor, render, scopeCss,
+  lintHidden, parseColor, render, renderTemplate, scopeCss, sectionBody,
 } from "../engine/render.mjs";
 
 const KB = [
@@ -312,6 +312,67 @@ describe("parseColor", () => {
     assert.deepEqual(parseColor("rgb(255, 255, 255)"), [255, 255, 255, 1]);
     assert.equal(parseColor("rgba(0,0,0,0)")[3], 0);
     assert.equal(parseColor("not-a-colour"), null);
+  });
+});
+
+describe("the brief template", () => {
+  const ctx = {
+    profile: { name: "Ada Lovelace", links: { github: "https://github.com/example" } },
+    rules: { company: { followups_allowed: false }, content: { banned_characters: ["x", "y"] } },
+    careerHome: "/tmp/ada",
+    __voice: "# Voice\n\n## Register\n\nShort sentences.\n\n## Closings\n\nOne ask.\n",
+    __kb: "# KB\n\n## Gaps\n\nNo Kubernetes.\n",
+  };
+
+  it("resolves scalars, conditionals, inverses and lists", () => {
+    assert.equal(renderTemplate("{{profile.name}}", ctx), "Ada Lovelace");
+    assert.equal(renderTemplate("{{#if profile.links.github}}has github{{/if}}", ctx), "has github");
+    assert.equal(renderTemplate("{{#if profile.links.site}}has site{{/if}}", ctx), "");
+    assert.equal(renderTemplate("{{#unless rules.company.followups_allowed}}no follow up{{/unless}}", ctx), "no follow up");
+    assert.equal(renderTemplate("{{#each rules.content.banned_characters}}[{{.}}]{{/each}}", ctx), "[x][y]");
+  });
+
+  it("pulls a named section out of voice.md and knowledge-base.md", () => {
+    assert.equal(renderTemplate("{{voice:Register}}", ctx), "Short sentences.");
+    assert.equal(renderTemplate("{{kb:Gaps}}", ctx), "No Kubernetes.");
+  });
+
+  it("renders a missing value as a FILL marker naming the file, never as nothing", () => {
+    const out = renderTemplate("Send from {{profile.mail.account}}.", ctx);
+    assert.match(out, /\[\[FILL\]\] profile\.mail\.account is missing from profile\.yaml/);
+
+    const voice = renderTemplate("{{voice:Openings}}", ctx);
+    assert.match(voice, /\[\[FILL\]\].*Openings.*voice\.md/);
+    // A silent hole is the failure this is guarding against: a brief with an
+    // empty invariant reads exactly like a brief with no such invariant.
+    assert.notEqual(voice.trim(), "");
+  });
+
+  it("strips the template's own comment header", () => {
+    assert.equal(renderTemplate("<!-- notes for the author -->\n# Brief", ctx), "# Brief");
+  });
+
+  it("handles a conditional nested inside a loop", () => {
+    const nested = renderTemplate(
+      "{{#each rules.content.banned_characters}}{{#if profile.name}}<{{.}}>{{/if}}{{/each}}",
+      ctx,
+    );
+    assert.equal(nested, "<x><y>");
+  });
+});
+
+describe("sectionBody", () => {
+  const md = "# Doc\n\n## One\n\nFirst body.\n\n### Nested\n\n- a bullet\n\n## Two\n\nSecond body.\n";
+
+  it("takes a section and stops at the next heading of the same level", () => {
+    const one = sectionBody(md, "One");
+    assert.ok(one.includes("First body."));
+    assert.ok(one.includes("- a bullet"));
+    assert.ok(!one.includes("Second body."));
+  });
+
+  it("returns an empty string for a heading that is not there", () => {
+    assert.equal(sectionBody(md, "Three"), "");
   });
 });
 

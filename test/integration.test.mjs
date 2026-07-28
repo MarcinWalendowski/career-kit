@@ -187,6 +187,52 @@ test("a workspace provisions from shipped templates alone", () => {
   rmSync(home, { recursive: true, force: true });
 });
 
+/* ------------------------------------------------ the banned-character chain */
+
+test("the shipped em dash rule survives all three hops from template to block", () => {
+  // Three files have to agree and each one looks fine alone:
+  //
+  //   1. rules.example.yaml declares the em dash as "\u2014", so the template
+  //      that bans the character does not itself contain it. That escape is the
+  //      subtle part and it is easy to "tidy" into a literal.
+  //   2. the hand-rolled YAML reader has to DECODE that escape. If it ever
+  //      stops, banned_characters holds the six-character string "\u2014",
+  //      which matches nothing, and the rule silently stops working.
+  //   3. the gate has to block a draft containing one.
+  //
+  // Nothing else catches hop 2. A parser that returns the literal escape is
+  // still a working parser by every other test in the suite.
+  const EM = String.fromCharCode(0x2014);
+
+  const raw = readFileSync(join(KIT, "templates/rules.example.yaml"), "utf8");
+  assert.ok(!raw.includes(EM), "the template that bans the character must not contain it");
+  assert.match(raw, /banned_characters:\s*\[\s*"\\u2014"\s*\]/);
+
+  const home = workspace({ job: JOB() });
+  const draft = join(home, "draft.md");
+
+  writeFileSync(draft, `Hi team,\n\nI built a thing ${EM} a real one.\n\nBest,\nAda\n`);
+  const blocked = gate(home, [
+    "check", "--id", "acme-founding-engineer", "--channel", "email",
+    "--sent-check", "0", "--sent-check-query", "x",
+    "--identity-domain", "acme.example", "--draft", draft,
+  ]);
+  assert.equal(blocked.code, 3);
+  assert.equal(blocked.json.blocked, "banned-content");
+
+  // The negative control. A rule that blocks everything is not a working rule.
+  writeFileSync(draft, "Hi team,\n\nI built a thing, a real one.\n\nBest,\nAda\n");
+  const allowed = gate(home, [
+    "check", "--id", "acme-founding-engineer", "--channel", "email",
+    "--sent-check", "0", "--sent-check-query", "x",
+    "--identity-domain", "acme.example", "--draft", draft,
+  ]);
+  assert.equal(allowed.code, 0);
+  assert.equal(allowed.json.allowed, true);
+
+  rmSync(home, { recursive: true, force: true });
+});
+
 /* ------------------------------------------- the skills call a real engine */
 
 test("every engine command a skill emits actually exists", () => {
@@ -235,6 +281,49 @@ test("every engine command a skill emits actually exists", () => {
 
   assert.deepEqual(missing, [], `skills call engine code that cannot answer:\n  ${missing.join("\n  ")}`);
   assert.ok(seen.size >= 6, `expected to find engine invocations in the skills, found ${seen.size}`);
+});
+
+/* ------------------------------------ adapters must satisfy the job schema */
+
+test("every adapter emits records the validator accepts", async () => {
+  // The unowned contract between two suites that each pass. sources.test.mjs
+  // asserts the normalised shape against its own expectations; validate.test.mjs
+  // asserts the schema against hand-written records. Neither runs adapter output
+  // through the validator, so an adapter is free to drift out of the enum and
+  // nothing notices until career-sources writes a record that the very next step
+  // rejects.
+  //
+  // Drift of exactly this kind is in the spec's problem statement: status,
+  // channel and stage had drifted across four files in the system this ports,
+  // and one channel column held a free-text sentence.
+  const { validateJob } = await import(join(KIT, "engine/validate.mjs"));
+  const fx = (n) => JSON.parse(readFileSync(join(KIT, "test/fixtures", n), "utf8"));
+
+  const CASES = [
+    ["greenhouse.mjs", "greenhouse.json"],
+    ["lever.mjs", "lever.json"],
+    ["ashby.mjs", "ashby.json"],
+    ["smartrecruiters.mjs", "smartrecruiters.json"],
+    ["recruitee.mjs", "recruitee.json"],
+    ["workable.mjs", "workable.json"],
+  ];
+
+  let checked = 0;
+  for (const [mod, file] of CASES) {
+    const a = await import(join(KIT, "engine/sources", mod));
+    const payload = fx(file);
+    const jobs = await a.search({ boards: ["acme"] }, {
+      fetchJson: async () => payload,
+      fetchText: async () => JSON.stringify(payload),
+    });
+    assert.ok(jobs.length > 0, `${a.id} returned nothing from its own fixture`);
+    for (const job of jobs) {
+      const { ok, errors } = validateJob(job);
+      assert.ok(ok, `${a.id} emitted a record the validator rejects:\n  ${(errors || []).join("\n  ")}`);
+      checked++;
+    }
+  }
+  assert.ok(checked >= 10, `expected to validate a real batch, only saw ${checked}`);
 });
 
 /* --------------------------------------------------- the extension can connect */
