@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{doc_title}}</title>
+<!--
+  The shell the renderer fills.
+
+  Slots are {{name}}. The renderer replaces them and emits a single
+  self-contained file: {{theme_css}} is the theme's stylesheet inlined, so the
+  output has no external requests and survives being emailed as an attachment.
+
+  Rules for editing this file:
+
+  1. Content comes from knowledge-base.md. Do not type a fact in here. A bullet
+     edited in a rendered artifact is a fact that now exists in two places, and
+     the one that gets sent is whichever the renderer did not overwrite.
+  2. Do not add anything that hides text. Not display:none, not opacity:0, not
+     off-screen positioning, not white-on-white. The renderer's lint refuses all
+     of it and names the selector. See README.md in this directory.
+  3. To make an element print-only or screen-only, use the data attributes
+     below. The renderer removes those nodes from the DOM for the target it is
+     not meant for. Removal is honest in a way that hiding is not: the text is
+     absent from the file rather than present and invisible.
+  4. data-aid values are the previewer's stable anchors. Each is the id of the
+     knowledge-base block the element came from, so clicking a bullet in the
+     previewer can write back to the right line. Keep them on generated blocks.
+-->
+<style>
+{{theme_css}}
+</style>
+</head>
+<body data-anno-sel="[data-aid]">
+
+  <!-- Screen only. The renderer deletes this node for print and PDF targets. -->
+  <div class="hint" data-screen-only>
+    <b>To export a one-page PDF:</b> print, choose Save as PDF, keep the default
+    margins. This bar is not in the PDF.
+  </div>
+
+  <div class="page">
+
+    <header data-aid="identity">
+      <h1>{{name}}</h1>
+      <div class="title">{{headline}}</div>
+      <div class="contact">{{contact_line}}</div>
+    </header>
+
+    <section class="summary" data-aid="summary">
+      <h2>Summary</h2>
+      <div>{{summary}}</div>
+    </section>
+
+    <section>
+      <h2>Experience</h2>
+      <!--
+        Repeated once per role. Shape, for a theme author reading this to learn
+        the class vocabulary:
+
+        <div class="job" data-aid="role:acme">
+          <div class="job-head">
+            <div class="role">Title, <span class="co">Company</span>, Location</div>
+            <div class="dates">Mon YYYY to Mon YYYY</div>
+          </div>
+          <div class="ctx">One line of context a stranger needs.</div>
+          <ul><li>A bullet.</li></ul>
+        </div>
+      -->
+      {{experience}}
+    </section>
+
+    <section>
+      <h2>Earlier</h2>
+      <!-- Condensed roles. <div class="job earlier"><b>Title</b>,
+           <span class="co">Company</span>, dates</div> -->
+      {{earlier}}
+    </section>
+
+    <section>
+      <h2>Education</h2>
+      <!-- <div class="edu-item">Programme, Institution
+           <div class="sub">Dates, notes</div></div> -->
+      {{education}}
+    </section>
+
+    <section class="skills">
+      <h2>Skills</h2>
+      <!-- One <p> per area: <p><b>Area:</b> comma, separated, list</p> -->
+      {{skills}}
+    </section>
+
+    <!--
+      Print only, if a theme wants it. The renderer deletes this node for the
+      screen target and keeps it for print and PDF.
+
+      <div data-print-only>{{footer}}</div>
+    -->
+
+  </div>
+</body>
+</html>

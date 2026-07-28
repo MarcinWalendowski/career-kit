@@ -1,0 +1,12 @@
+{
+  "name": "career-kit",
+  "description": "Run a job search as a pipeline: one knowledge base as the source of truth, tailored applications, a gate that makes every irreversible send safe, ten job sources, and a local previewer you can edit in.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Marcin Walendowski",
+    "url": "https://github.com/MarcinWalendowski"
+  },
+  "homepage": "https://github.com/MarcinWalendowski/career-kit",
+  "license": "MIT",
+  "keywords": ["career", "job-search", "resume", "cv", "applications", "ats"]
+}

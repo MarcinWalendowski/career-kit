@@ -1,0 +1,21 @@
+{
+  "_fixture": {
+    "note": "harbourline.example links its Ashby board from its own careers page. This is the strongest route shape there is, and the resolver should stop once it has it.",
+    "domain": "harbourline.example"
+  },
+  "https://harbourline.example/": {
+    "ok": true,
+    "status": 200,
+    "text": "<!doctype html><html><body><nav><a href=\"/product\">Product</a><a href=\"/careers\">Careers</a></nav><h1>Freight tracking for small carriers</h1></body></html>"
+  },
+  "https://harbourline.example/careers": {
+    "ok": true,
+    "status": 200,
+    "text": "<!doctype html><html><body><h1>Join our team</h1><p>We are hiring across engineering.</p><a href=\"https://jobs.ashbyhq.com/harbourline\">See all open roles</a><p>Questions? careers@harbourline.example</p></body></html>"
+  },
+  "https://harbourline.example/jobs": {
+    "ok": false,
+    "status": 404,
+    "text": ""
+  }
+}

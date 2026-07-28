@@ -1,0 +1,32 @@
+{
+  "_fixture": {
+    "captured": "2026-07-28",
+    "note": "What the MV3 extension posts to the local server after the user clicks capture on a results page they already had open. There is no endpoint behind this file."
+  },
+  "source": "linkedin",
+  "captured_at": "2026-07-28T10:00:00Z",
+  "page_url": "https://www.linkedin.com/jobs/search/?keywords=backend%20engineer",
+  "items": [
+    {
+      "job_id": "3901234567",
+      "title": "Senior Backend Engineer",
+      "company": "Brackenridge",
+      "location": "Amsterdam, North Holland, Netherlands",
+      "workplace_type": "Hybrid",
+      "url": "https://www.linkedin.com/jobs/view/3901234567/",
+      "salary_text": "90,000 - 120,000 a year (estimated)",
+      "easy_apply": true,
+      "description": "Brackenridge runs a payments reconciliation platform for marketplaces."
+    },
+    {
+      "jobId": "3907654321",
+      "title": "Staff Engineer, Infrastructure",
+      "companyName": "Wrenfield",
+      "jobLocation": "Remote",
+      "workplaceType": "Remote",
+      "jobUrl": "https://www.linkedin.com/jobs/view/3907654321/",
+      "easyApply": false,
+      "description": "Own the build and release pipeline."
+    }
+  ]
+}

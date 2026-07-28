@@ -1,0 +1,21 @@
+{
+  "_fixture": {
+    "note": "ghostworks.example is up and serves a JavaScript shell. No careers page, no board, no address, nothing in the sitemap. Every URL not listed here answers 404 in the test stub, including all five ATS slug probes.",
+    "domain": "ghostworks.example"
+  },
+  "https://ghostworks.example/": {
+    "ok": true,
+    "status": 200,
+    "text": "<!doctype html><html><head><title>Ghostworks</title></head><body><div id=\"root\"></div><script src=\"/assets/app.6f2a1c.js\"></script></body></html>"
+  },
+  "https://ghostworks.example/about": {
+    "ok": true,
+    "status": 200,
+    "text": "<!doctype html><html><body><div id=\"root\"></div><script src=\"/assets/app.6f2a1c.js\"></script></body></html>"
+  },
+  "https://ghostworks.example/robots.txt": {
+    "ok": true,
+    "status": 200,
+    "text": "User-agent: *\nDisallow: /assets/\n"
+  }
+}

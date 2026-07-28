@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Career Kit previewer</title>
+<!-- The server inlines the per-boot token here so the human never types it.
+     A page on another origin cannot read this document, and keeping the token
+     out of a script literal lets the CSP stay at script-src 'self'. -->
+<meta name="career-token" content="__CAREER_TOKEN__">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="ck-bar">
+  <div class="ck-brand">Career Kit</div>
+
+  <div class="ck-group">
+    <button type="button" id="btn-edit" class="ck-btn">Edit text</button>
+    <button type="button" id="btn-note" class="ck-btn">Note</button>
+    <button type="button" id="btn-review" class="ck-btn">Review <span id="chg-count" class="ck-pill">0</span></button>
+  </div>
+
+  <div class="ck-group ck-right">
+    <button type="button" id="btn-audience" class="ck-btn">Audience</button>
+    <button type="button" id="btn-pdf" class="ck-btn">Export PDF</button>
+    <button type="button" id="btn-theme" class="ck-btn ck-icon" aria-label="Toggle light and dark">◐</button>
+  </div>
+</header>
+
+<div class="ck-audience" id="audience-strip" hidden>
+  <span class="ck-audience-label" id="audience-label"></span>
+  <span class="ck-audience-text" id="audience-text"></span>
+</div>
+
+<div class="ck-banner ck-banner-warn" id="conflict" hidden>
+  <div class="ck-banner-body">
+    <strong>This file changed on disk while you were editing it.</strong>
+    <span id="conflict-detail">Claude or another editor wrote the knowledge base. Pick which version wins.</span>
+  </div>
+  <div class="ck-banner-actions">
+    <button type="button" id="conflict-theirs" class="ck-btn">Reload theirs</button>
+    <button type="button" id="conflict-mine" class="ck-btn ck-btn-primary">Keep mine</button>
+  </div>
+</div>
+
+<div class="ck-banner ck-banner-stop" id="lint" hidden>
+  <div class="ck-banner-body">
+    <strong>Render refused: the document hides text from a human reader.</strong>
+    <div id="lint-detail"></div>
+  </div>
+  <div class="ck-banner-actions">
+    <button type="button" id="lint-close" class="ck-btn">Dismiss</button>
+  </div>
+</div>
+
+<main class="ck-panes" id="panes">
+  <section class="ck-pane ck-pane-source" id="pane-source">
+    <div class="ck-pane-head">
+      <span>knowledge-base.md</span>
+      <span class="ck-path" id="kb-path"></span>
+    </div>
+    <textarea id="kb" spellcheck="false" placeholder="The knowledge base is empty. Type here, or run the career-kb skill."></textarea>
+  </section>
+
+  <div class="ck-split" id="split" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize panes"></div>
+
+  <section class="ck-pane ck-pane-cv">
+    <div class="ck-pane-head">
+      <span>Rendered CV</span>
+      <span class="ck-path" id="cv-theme"></span>
+    </div>
+    <div class="ck-cv-scroll" id="cv-scroll">
+      <div id="cv-host" data-anno-prefix="cv"></div>
+    </div>
+  </section>
+
+  <aside class="ck-rail" id="rail">
+    <div class="ck-pane-head"><span>Section notes</span></div>
+    <div id="rail-body"></div>
+  </aside>
+</main>
+
+<footer class="ck-status">
+  <span id="save-state" class="ck-save">Ready</span>
+  <span class="ck-status-sep"></span>
+  <span id="workspace" class="ck-path"></span>
+  <span class="ck-status-sep"></span>
+  <span class="ck-hint">Edits write to the knowledge base. Version history is git in your workspace.</span>
+</footer>
+
+<style id="cv-theme-style"></style>
+<script src="/annotate.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>

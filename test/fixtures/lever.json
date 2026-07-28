@@ -1,0 +1,41 @@
+[
+  {
+    "id": "8f21b0c4-1d3e-4a55-9b77-2c0e5a4d9f10",
+    "text": "Founding Software Engineer",
+    "hostedUrl": "https://jobs.lever.co/northwind/8f21b0c4-1d3e-4a55-9b77-2c0e5a4d9f10",
+    "applyUrl": "https://jobs.lever.co/northwind/8f21b0c4-1d3e-4a55-9b77-2c0e5a4d9f10/apply",
+    "createdAt": 1785312000000,
+    "workplaceType": "hybrid",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "San Francisco, CA",
+      "team": "Core",
+      "allLocations": ["San Francisco, CA"]
+    },
+    "descriptionPlain": "Northwind Labs is building a differential sync engine. You will be the fourth engineer.",
+    "salaryRange": {
+      "currency": "USD",
+      "min": 180000,
+      "max": 240000,
+      "interval": "per-year-salary"
+    },
+    "lists": [{ "text": "What you will do", "content": "<li>Own the sync protocol</li>" }]
+  },
+  {
+    "id": "3c7de991-55aa-4f0b-8e12-77b1c9a4e222",
+    "text": "Staff Platform Engineer",
+    "hostedUrl": "https://jobs.lever.co/northwind/3c7de991-55aa-4f0b-8e12-77b1c9a4e222",
+    "applyUrl": "https://jobs.lever.co/northwind/3c7de991-55aa-4f0b-8e12-77b1c9a4e222/apply",
+    "createdAt": 1782806400000,
+    "workplaceType": "remote",
+    "categories": {
+      "commitment": "Full-time",
+      "department": "Engineering",
+      "location": "Remote (US)",
+      "team": "Platform",
+      "allLocations": ["Remote (US)"]
+    },
+    "descriptionPlain": "Own build, deploy and observability for the sync engine."
+  }
+]

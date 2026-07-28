@@ -1,0 +1,81 @@
+# .gitignore for a Career Kit workspace ($CAREER_HOME).
+#
+# Copied here by `career-setup`. The workspace is private and it is its own git
+# repo, which is the right default: you want history on your knowledge base, and
+# a mistake in a rendered CV should be revertable.
+#
+# The problem is that "private repo" is a decision you make once and a `git push`
+# is a decision you make at 1am. One day this workspace gets pushed somewhere,
+# and on that day the ignore list below is the only thing standing between a
+# public URL and other people's contact details.
+#
+# So the default is: an accidental push publishes a skeleton. Your knowledge
+# base, your profile, your rules, your voice and your CV are all tracked, because
+# those are yours and losing them hurts. Everything that contains someone ELSE's
+# data, or that is rebuildable, is ignored.
+#
+# Un-ignore something only when you have decided it is safe, one line at a time.
+
+# ---------------------------------------------------------------------------
+# Third-party personal data. This is the part that must never be public.
+# ---------------------------------------------------------------------------
+
+# One JSON file per target. Holds company contacts, recruiter names, and
+# whatever a posting or a reply contained. Real job records have carried a
+# founder's personal mobile number and a private home address.
+jobs/
+
+# Per-target drafts: the email bodies you wrote, including anything you decided
+# not to send, plus form answers and cover letters naming individual people.
+drafts/
+
+# Proof that a form submit happened: screenshots of a submitted application,
+# confirmation pages, PDFs. Screenshots of a filled form show every field you
+# typed, which is your address and phone number rendered as an image.
+outputs/receipts/
+
+# ---------------------------------------------------------------------------
+# Derived state. Rebuildable, and it leaks the shape of your search.
+# ---------------------------------------------------------------------------
+
+# The tracker DB, rebuilt from jobs/ by `career-review`. Publishing it publishes
+# every company you applied to, when, with what outcome, and your salary notes.
+# The -wal and -shm files hold recent writes that have not landed in the DB yet,
+# so ignoring only career.db leaks the last few transactions.
+career.db
+career.db-wal
+career.db-shm
+
+# Append-only gate history: every claim, send, block and resolve, with
+# timestamps. A complete log of who you contacted and when.
+.ledger.jsonl
+
+# In-flight leases. Short-lived, machine-local, and they name the target of an
+# action that has not finished yet. Committing one also breaks the lock: a lease
+# arriving by `git pull` blocks a claim on a machine where nothing is running.
+.leases/
+
+# The previewer's per-boot auth token. It is the only credential guarding a
+# local server that writes files. Never commit a credential, even a local one,
+# even one that rotates.
+.previewer-token
+
+# ---------------------------------------------------------------------------
+# Noise.
+# ---------------------------------------------------------------------------
+.DS_Store
+*~
+*.swp
+.vscode/
+.idea/
+node_modules/
+
+# ---------------------------------------------------------------------------
+# Tracked on purpose, listed here so the decision is visible:
+#   profile.yaml        your identity. Yours, and the file forms read from.
+#   rules.yaml          your doctrine. Worth history.
+#   voice.md            expensive to re-derive. Worth history most of all.
+#   knowledge-base.md   the source of truth.
+#   cv/                 including the canonical PDF.
+#   outputs/brief.md    generated, but small and useful to diff.
+# ---------------------------------------------------------------------------

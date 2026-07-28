@@ -1,0 +1,35 @@
+{
+  "offset": 0,
+  "limit": 100,
+  "totalFound": 2,
+  "content": [
+    {
+      "id": "744000012345678",
+      "uuid": "b1f0c2d3-4e5f-6789-abcd-ef0123456789",
+      "name": "Backend Engineer, Payments",
+      "refNumber": "REF-2201",
+      "company": { "identifier": "UmbraSystems", "name": "Umbra Systems" },
+      "location": { "city": "Warsaw", "region": "Mazowieckie", "country": "pl", "remote": false },
+      "department": { "label": "Engineering" },
+      "function": { "label": "Software Development" },
+      "typeOfEmployment": { "label": "Permanent" },
+      "experienceLevel": { "label": "Mid-Senior Level" },
+      "releasedDate": "2026-07-15T08:00:00.000Z",
+      "ref": "https://api.smartrecruiters.com/v1/companies/UmbraSystems/postings/744000012345678"
+    },
+    {
+      "id": "744000087654321",
+      "uuid": "c2e1d3f4-5a6b-7890-bcde-f01234567890",
+      "name": "Site Reliability Engineer",
+      "refNumber": "REF-2202",
+      "company": { "identifier": "UmbraSystems", "name": "Umbra Systems" },
+      "location": { "city": "Remote", "region": "", "country": "pl", "remote": true },
+      "department": { "label": "Engineering" },
+      "function": { "label": "Software Development" },
+      "typeOfEmployment": { "label": "Permanent" },
+      "experienceLevel": { "label": "Senior" },
+      "releasedDate": "2026-07-19T08:00:00.000Z",
+      "ref": "https://api.smartrecruiters.com/v1/companies/UmbraSystems/postings/744000087654321"
+    }
+  ]
+}

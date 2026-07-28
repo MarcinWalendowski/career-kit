@@ -1,0 +1,36 @@
+[
+  {
+    "legal": "Fixture stand-in for the legal notice object that RemoteOK returns as element zero. It is not a job and must never become a record."
+  },
+  {
+    "slug": "harbourline-senior-backend-engineer",
+    "id": "1099001",
+    "epoch": 1784937600,
+    "date": "2026-07-24T09:00:00+00:00",
+    "company": "Harbourline",
+    "company_logo": "https://remoteok.com/assets/logo.png",
+    "position": "Senior Backend Engineer",
+    "tags": ["backend", "go", "postgres"],
+    "description": "<p>Harbourline runs freight tracking for small carriers.</p>",
+    "location": "Worldwide",
+    "salary_min": 110000,
+    "salary_max": 150000,
+    "apply_url": "https://harbourline.example/jobs/senior-backend-engineer",
+    "url": "https://remoteok.com/remote-jobs/1099001-senior-backend-engineer-harbourline"
+  },
+  {
+    "slug": "mossbank-platform-engineer",
+    "id": "1099002",
+    "epoch": 1784592000,
+    "date": "2026-07-20T09:00:00+00:00",
+    "company": "Mossbank",
+    "position": "Platform Engineer",
+    "tags": ["platform", "kubernetes"],
+    "description": "<p>Own the deploy pipeline.</p>",
+    "location": "Europe",
+    "salary_min": 0,
+    "salary_max": 0,
+    "apply_url": "https://boards.greenhouse.io/mossbank/jobs/7788",
+    "url": "https://remoteok.com/remote-jobs/1099002-platform-engineer-mossbank"
+  }
+]

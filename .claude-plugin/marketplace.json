@@ -1,0 +1,19 @@
+{
+  "name": "career-kit",
+  "owner": {
+    "name": "Marcin Walendowski",
+    "url": "https://github.com/MarcinWalendowski"
+  },
+  "metadata": {
+    "description": "Career Kit OS - a job search that runs as a pipeline instead of a to-do list.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "career-kit",
+      "source": "./",
+      "description": "Knowledge base, tailored applications, a gate that makes irreversible sends safe, job-source ingestion and a local previewer.",
+      "category": "productivity"
+    }
+  ]
+}

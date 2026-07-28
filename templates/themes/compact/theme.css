@@ -1,0 +1,110 @@
+/* Career Kit - compact theme.
+ *
+ * A second theme, and the reason it exists is that a seam nobody has crossed is
+ * not a seam. `default` and `compact` share one class vocabulary and one HTML
+ * shell; everything below is look. If a theme ever needs the renderer to emit
+ * different markup, the seam is in the wrong place and the vocabulary should
+ * grow instead.
+ *
+ * How it differs from default, on purpose and not cosmetically:
+ *   - single column, no card. The page is the paper, not an object on a desk.
+ *   - a slate accent instead of violet, and a rule under each heading rather
+ *     than a flex line beside it.
+ *   - denser: tighter leading, smaller type, less air between roles. It fits
+ *     roughly two more bullets on the same A4 page.
+ *   - dates sit above the role rather than beside it, which reads better when
+ *     titles are long.
+ *
+ * Same constraint as every theme: nothing here may hide text. No display:none,
+ * no visibility:hidden, no opacity:0, no font-size:0, no off-screen
+ * positioning, no foreground equal to background. See ../default/README.md.
+ */
+
+:root {
+  --ink: #16181d;
+  --muted: #616a76;
+  --accent: #0f4c81;
+  --accent-soft: #e8eef5;
+  --rule: #d9dee5;
+  --bg: #ffffff;
+  --maxw: 780px;
+}
+
+* { box-sizing: border-box }
+
+html, body {
+  margin: 0; padding: 0; background: #fbfbfc; color: var(--ink);
+  font-family: "Iowan Old Style", Charter, Georgia, "Times New Roman", serif;
+  font-size: 13px; line-height: 1.36;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+
+/* No card, no shadow, no radius. Paper. */
+.page {
+  max-width: var(--maxw); margin: 20px auto; background: var(--bg);
+  padding: 30px 34px; box-shadow: none; border-radius: 0;
+}
+
+.hint {
+  max-width: var(--maxw); margin: 12px auto -4px; padding: 8px 12px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 3px; font-size: 12px; text-align: left;
+}
+.hint b { font-weight: 700 }
+
+/* Header: a thin rule, name in small caps, everything left aligned. */
+header { border-bottom: 1px solid var(--rule); padding-bottom: 8px; margin-bottom: 10px }
+h1 { font-size: 23px; margin: 0; letter-spacing: .01em; font-weight: 600; font-variant: small-caps }
+.title { color: var(--ink); font-weight: 400; font-size: 12.5px; margin-top: 2px; font-style: italic }
+.contact { color: var(--muted); font-size: 11.5px; margin-top: 5px }
+.contact a { color: var(--muted); text-decoration: none; border-bottom: 0 }
+.sep { color: var(--rule); margin: 0 5px }
+
+/* Sections: heading over a rule rather than beside one. */
+section { margin-top: 10px }
+h2 {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .14em; color: var(--accent);
+  margin: 0 0 5px; font-weight: 700; display: block;
+  border-bottom: 1px solid var(--rule); padding-bottom: 2px;
+}
+h2::after { content: none }
+
+.summary { font-size: 12px; color: var(--ink) }
+
+/* Dates above the role, so long titles do not wrap around a floated date. */
+.job { margin-bottom: 7px; page-break-inside: avoid; break-inside: avoid }
+.job-head { display: block }
+.role { font-weight: 600; font-size: 12.8px; display: block }
+.role .co { color: var(--accent); font-variant: small-caps; letter-spacing: .02em }
+.dates { color: var(--muted); font-size: 10.8px; letter-spacing: .04em; text-transform: uppercase; display: block }
+.ctx { color: var(--muted); font-style: italic; font-size: 11.4px; margin: 1px 0 2px }
+ul { margin: 2px 0 0; padding-left: 14px }
+li { margin: 1px 0 }
+li::marker { color: var(--muted); content: "\2013\00a0" }
+b, strong { font-weight: 700 }
+
+.earlier { font-size: 11.6px; color: var(--muted) }
+.earlier b { color: var(--ink); font-weight: 600 }
+.earlier .co { color: var(--accent); font-weight: 600; font-variant: small-caps }
+
+.edu-item { font-size: 11.8px }
+.edu-item .sub { color: var(--muted); font-size: 11px; font-style: italic }
+.skills { font-size: 11.4px }
+.skills p { margin: 2px 0; font-size: 11.4px }
+.skills b { color: var(--accent); font-variant: small-caps; letter-spacing: .02em }
+
+/* Print. Same A4 geometry as default so the one-page fit assertion means the
+ * same thing across themes. Compact runs a shade smaller still. */
+@media print {
+  html, body { background: #fff; font-size: 9.2px; line-height: 1.28 }
+  .page { box-shadow: none; margin: 0; max-width: none; padding: 0; border-radius: 0 }
+  @page { size: A4; margin: 10mm 12mm }
+  a { color: var(--muted) !important }
+  section { margin-top: 6px }
+  .job { margin-bottom: 4px }
+  li { margin: 1px 0 }
+  .ctx { margin: 1px 0 1.5px }
+  h1 { font-size: 19px }
+  h2 { margin-bottom: 3px }
+  header { padding-bottom: 5px; margin-bottom: 6px }
+}

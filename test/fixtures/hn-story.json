@@ -1,0 +1,33 @@
+{
+  "_fixture": {
+    "captured": "2026-07-28",
+    "endpoint": "https://hn.algolia.com/api/v1/search?query=Ask%20HN:%20Who%20is%20hiring&tags=story,author_whoishiring"
+  },
+  "hits": [
+    {
+      "objectID": "41000001",
+      "title": "Ask HN: Who is hiring? (July 2026)",
+      "author": "whoishiring",
+      "created_at": "2026-07-01T15:00:00.000Z",
+      "num_comments": 612
+    },
+    {
+      "objectID": "41000002",
+      "title": "Ask HN: Who wants to be hired? (July 2026)",
+      "author": "whoishiring",
+      "created_at": "2026-07-01T15:01:00.000Z",
+      "num_comments": 210
+    },
+    {
+      "objectID": "40900001",
+      "title": "Ask HN: Who is hiring? (June 2026)",
+      "author": "whoishiring",
+      "created_at": "2026-06-02T15:00:00.000Z",
+      "num_comments": 588
+    }
+  ],
+  "nbHits": 3,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 20
+}

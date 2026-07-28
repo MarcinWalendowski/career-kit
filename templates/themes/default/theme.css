@@ -1,0 +1,113 @@
+/* Career Kit - default theme.
+ *
+ * Lifted from a CV that has been printed, sent and read. The values are not
+ * decoration: the print block below is tuned so a full career fits on one A4
+ * page, and the one-page fit assertion in the render tests depends on it.
+ * Change --maxw, the print font-size or the print spacing and expect the fit
+ * test to move.
+ *
+ * A theme owns look. It never owns content and it never owns visibility.
+ * Nothing here may hide text: see README.md in this directory for the list the
+ * renderer's lint refuses, and for the supported way to make something
+ * print-only or screen-only.
+ *
+ * The class vocabulary is documented in README.md. A theme must style all of
+ * it, because the renderer emits all of it.
+ */
+
+/* The seven variables a theme is mostly made of. Change these first; most of
+ * what makes a theme feel different is here rather than in the rules below. */
+:root {
+  --ink: #1a1c22;
+  --muted: #5b6472;
+  --accent: #5b3df2;
+  --accent-soft: #efeaff;
+  --rule: #e4e7ec;
+  --bg: #ffffff;
+  --maxw: 820px;
+}
+
+* { box-sizing: border-box }
+
+html, body {
+  margin: 0; padding: 0; background: #f4f5f7; color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13.5px; line-height: 1.42;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+
+.page {
+  max-width: var(--maxw); margin: 24px auto; background: var(--bg);
+  padding: 38px 46px; box-shadow: 0 2px 24px rgba(20, 22, 34, .10); border-radius: 6px;
+}
+
+/* Screen-only guidance bar. Carries data-screen-only in cv.html, and the
+ * renderer REMOVES the node for print and PDF targets. It is not hidden with
+ * CSS, because CSS that hides text is exactly what the lint refuses and there
+ * is no way for a lint to tell an honest display:none from a dishonest one. */
+.hint {
+  max-width: var(--maxw); margin: 16px auto -8px; padding: 10px 16px;
+  background: var(--accent-soft); color: var(--accent);
+  border-radius: 8px; font-size: 12.5px; text-align: center;
+}
+.hint b { font-weight: 600 }
+
+/* Header */
+header { border-bottom: 2px solid var(--accent); padding-bottom: 11px; margin-bottom: 13px }
+h1 { font-size: 26px; margin: 0; letter-spacing: -.01em; font-weight: 700 }
+.title { color: var(--accent); font-weight: 600; font-size: 13.5px; margin-top: 3px }
+.contact { color: var(--muted); font-size: 12px; margin-top: 7px }
+.contact a { color: var(--muted); text-decoration: none; border-bottom: 1px solid var(--rule) }
+.sep { color: #c3c8d2; margin: 0 7px }
+
+/* Sections */
+section { margin-top: 12px }
+h2 {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .11em; color: var(--accent);
+  margin: 0 0 7px; font-weight: 700; display: flex; align-items: center; gap: 10px;
+}
+h2::after { content: ""; flex: 1; height: 1px; background: var(--rule) }
+
+.summary { font-size: 12.5px; color: #2b2f38 }
+
+/* One role. page-break-inside keeps a job from splitting across the fold, which
+ * matters more than it sounds: a two-line orphan at the top of page two is the
+ * most common reason a CV that fits still looks like it does not. */
+.job { margin-bottom: 9px; page-break-inside: avoid; break-inside: avoid }
+.job-head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px }
+.role { font-weight: 600; font-size: 13.2px }
+.role .co { color: var(--accent) }
+.dates { color: var(--muted); font-size: 11.4px; white-space: nowrap; flex-shrink: 0 }
+.ctx { color: var(--muted); font-style: italic; font-size: 11.8px; margin: 2px 0 3px }
+ul { margin: 3px 0 0; padding-left: 16px }
+li { margin: 2px 0 }
+li::marker { color: var(--accent) }
+b, strong { font-weight: 600 }
+
+/* Condensed earlier roles */
+.earlier { font-size: 12px; color: #2b2f38 }
+.earlier b { color: var(--ink) }
+.earlier .co { color: var(--accent); font-weight: 600 }
+
+/* Education and skills */
+.edu-item { font-size: 12.2px }
+.edu-item .sub { color: var(--muted); font-size: 11.4px }
+.skills p { margin: 3px 0; font-size: 11.8px }
+.skills b { color: var(--accent) }
+
+/* Print. Do not loosen these without re-running the one-page fit assertion.
+ * The renderer measures the rendered document in a 703px container with these
+ * rules flattened, and asserts a height at or under 1047px. */
+@media print {
+  html, body { background: #fff; font-size: 9.5px; line-height: 1.31 }
+  .page { box-shadow: none; margin: 0; max-width: none; padding: 0; border-radius: 0 }
+  @page { size: A4; margin: 10mm 12mm }
+  a { color: var(--muted) !important }
+  section { margin-top: 7px }
+  .job { margin-bottom: 5px }
+  li { margin: 1.5px 0 }
+  .ctx { margin: 1px 0 2px }
+  h1 { font-size: 20px }
+  h2 { margin-bottom: 4px }
+  header { padding-bottom: 6px; margin-bottom: 7px }
+}

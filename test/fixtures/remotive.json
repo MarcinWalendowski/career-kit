@@ -1,0 +1,33 @@
+{
+  "0-legal-notice": "Fixture stand-in for the legal notice string Remotive returns alongside the jobs array.",
+  "job-count": 2,
+  "jobs": [
+    {
+      "id": 2200101,
+      "url": "https://remotive.com/remote-jobs/software-dev/staff-engineer-2200101",
+      "title": "Staff Engineer",
+      "company_name": "Quillfeather",
+      "company_logo": "https://remotive.com/logo.png",
+      "category": "Software Development",
+      "tags": ["typescript", "distributed systems"],
+      "job_type": "full_time",
+      "publication_date": "2026-07-18T08:00:00",
+      "candidate_required_location": "USA, Canada",
+      "salary": "$180,000 - $220,000",
+      "description": "<p>Quillfeather builds an audio transcription pipeline for newsrooms.</p>"
+    },
+    {
+      "id": 2200102,
+      "url": "https://remotive.com/remote-jobs/devops/sre-2200102",
+      "title": "Site Reliability Engineer",
+      "company_name": "Ridgeway Data",
+      "category": "DevOps",
+      "tags": ["sre"],
+      "job_type": "contract",
+      "publication_date": "2026-05-02T08:00:00",
+      "candidate_required_location": "Anywhere",
+      "salary": "",
+      "description": "<p>Keep the ingest cluster alive.</p>"
+    }
+  ]
+}

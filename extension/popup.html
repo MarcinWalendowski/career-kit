@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Career Kit Capture</title>
+<style>
+  :root { color-scheme: light dark; --ink: #1a1c22; --muted: #5b6472; --accent: #5b3df2; --rule: #e4e7ec; --bg: #fff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #e8eaf0; --muted: #98a2b3; --accent: #a892ff; --rule: #2a2e38; --bg: #16181d; }
+  }
+  body {
+    width: 320px; margin: 0; padding: 14px;
+    font: 13px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--ink); background: var(--bg);
+  }
+  h1 { font-size: 13px; margin: 0 0 2px; letter-spacing: -.01em }
+  .sub { color: var(--muted); font-size: 11.5px; margin-bottom: 12px }
+  label { display: block; font-size: 11px; color: var(--muted); margin: 10px 0 3px; letter-spacing: .04em; text-transform: uppercase }
+  input {
+    width: 100%; padding: 6px 8px; border: 1px solid var(--rule); border-radius: 5px;
+    background: transparent; color: var(--ink); font: inherit; font-size: 12px;
+  }
+  .row { display: flex; gap: 8px }
+  .row .port { width: 88px; flex: 0 0 auto }
+  button {
+    width: 100%; margin-top: 12px; padding: 8px 10px; border: 0; border-radius: 6px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 600; cursor: pointer;
+  }
+  button:disabled { opacity: .55; cursor: default }
+  button.secondary { background: transparent; color: var(--muted); border: 1px solid var(--rule); font-weight: 500; margin-top: 6px }
+  .status { margin-top: 12px; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 6px; font-size: 12px; min-height: 18px }
+  .status.err { border-color: #d4573c; color: #d4573c }
+  .status.ok { border-color: #2f8f5b; color: #2f8f5b }
+  .note { margin-top: 12px; color: var(--muted); font-size: 11px; border-top: 1px solid var(--rule); padding-top: 8px }
+  code { font-size: 11px }
+</style>
+</head>
+<body>
+  <h1>Career Kit Capture</h1>
+  <div class="sub" id="site">Reading the current tab.</div>
+
+  <label for="token">Previewer token</label>
+  <input id="token" type="password" autocomplete="off" spellcheck="false"
+         placeholder="paste from .previewer-token">
+
+  <div class="row">
+    <div style="flex:1">
+      <label for="port">Server port</label>
+      <input id="port" class="port" type="number" min="1" max="65535" value="8899">
+    </div>
+  </div>
+
+  <button id="capture">Capture jobs on this page</button>
+  <button id="check" class="secondary">Check the local server</button>
+
+  <div class="status" id="status"></div>
+
+  <div class="note">
+    Reads only what is rendered right now. It does not scroll, does not follow
+    the next page, and never runs on its own. Records go to
+    <code>jobs/inbox/</code> on this machine and nowhere else.
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+{
+  "name": "Fernwood Instruments",
+  "description": "Precision sensors for greenhouses.",
+  "jobs": [
+    {
+      "title": "Full Stack Engineer",
+      "shortcode": "A1B2C3D4E5",
+      "code": null,
+      "employment_type": "Full-time",
+      "telecommuting": false,
+      "department": "Engineering",
+      "url": "https://apply.workable.com/fernwood/j/A1B2C3D4E5",
+      "shortlink": "https://apply.workable.com/j/A1B2C3D4E5",
+      "application_url": "https://apply.workable.com/fernwood/j/A1B2C3D4E5/apply",
+      "published_on": "2026-07-12",
+      "created_at": "2026-07-11",
+      "country": "United Kingdom",
+      "city": "Bristol",
+      "state": "England",
+      "experience": "Mid-level",
+      "location": {
+        "country": "United Kingdom",
+        "city": "Bristol",
+        "region": "England",
+        "telecommuting": false
+      },
+      "description": "<p>We make soil moisture sensors. You will own the ingest API and the dashboard.</p>"
+    },
+    {
+      "title": "Senior Data Engineer",
+      "shortcode": "F6G7H8I9J0",
+      "employment_type": "Full-time",
+      "telecommuting": true,
+      "department": "Data",
+      "url": "https://apply.workable.com/fernwood/j/F6G7H8I9J0",
+      "shortlink": "https://apply.workable.com/j/F6G7H8I9J0",
+      "application_url": "https://apply.workable.com/fernwood/j/F6G7H8I9J0/apply",
+      "published_on": "2026-07-20",
+      "created_at": "2026-07-20",
+      "country": "United Kingdom",
+      "city": "Remote",
+      "state": "",
+      "location": { "country": "United Kingdom", "city": "Remote", "telecommuting": true },
+      "description": "<p>Own the sensor telemetry warehouse.</p>"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "_fixture": {
+    "note": "The collision case keeps the publicly documented slug (the Ashby board at `nudge` belongs to a neurotech company, not to the health-coaching product of the same name). Every other company here is invented, on the reserved .example TLD.",
+    "sibling_cases": "Same trap as `ditto`, an edge-sync company rather than the AI product, and `miso`, a cleaning marketplace rather than the travel product."
+  },
+
+  "collision_same_name": {
+    "why": "Name matches perfectly, product does not. This is the whole reason the check exists.",
+    "record": {
+      "company": "Nudge",
+      "company_id": "nudge",
+      "domains": ["nudge.example"],
+      "about": "Health coaching delivered over text message on a monthly subscription"
+    },
+    "posting": {
+      "company": "Nudge",
+      "title": "Staff Ultrasound Engineer",
+      "description": "Nudge is building a non-invasive neuromodulation device. You will design transducer arrays and run MR imaging studies in our San Francisco lab."
+    }
+  },
+
+  "no_signal_at_all": {
+    "why": "Nothing to compare on either side. Unknown identity must block exactly like a wrong one.",
+    "record": { "company": "Vantry", "company_id": "vantry", "domains": [] },
+    "posting": { "description": "" }
+  },
+
+  "verified_by_domain": {
+    "why": "The posting names a domain the record already holds.",
+    "record": {
+      "company": "Tidepool Analytics",
+      "company_id": "tidepool-analytics",
+      "domains": ["tidepool.example"],
+      "about": "Satellite imagery turned into flood risk models"
+    },
+    "posting": {
+      "company": "Tidepool Analytics",
+      "title": "Founding Engineer",
+      "description": "Tidepool Analytics turns satellite imagery into flood risk models. Apply at https://tidepool.example/careers or write to careers@tidepool.example."
+    }
+  },
+
+  "verified_by_name_and_product": {
+    "why": "No domain anywhere in the copy, but the name matches and the description describes the same business.",
+    "record": {
+      "company": "Northwind Labs",
+      "company_id": "northwind-labs",
+      "domains": ["northwind.example"],
+      "about": "A differential sync engine for offline mobile applications"
+    },
+    "posting": {
+      "company": "Northwind Labs",
+      "title": "Founding Software Engineer",
+      "description": "Northwind Labs is building a differential sync engine. You will own the sync protocol and the offline mobile client."
+    }
+  },
+
+  "foreign_domain": {
+    "why": "The posting names somebody else's domain and none of ours, with no product description to fall back on.",
+    "record": { "company": "Acme Robotics", "company_id": "acme-robotics", "domains": ["acme.example"] },
+    "posting": {
+      "company": "Umbra Systems",
+      "title": "Backend Engineer",
+      "description": "Apply at https://umbra.example/jobs"
+    }
+  }
+}

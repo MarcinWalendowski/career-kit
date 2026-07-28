@@ -1,0 +1,31 @@
+# This repo is PUBLIC and holds no personal data. Nothing from a workspace
+# belongs here. If you are looking for a file that is ignored below, it lives
+# in $CAREER_HOME, which is a separate private repo.
+
+# A workspace accidentally created inside the checkout
+career/
+workspace/
+*.db
+*.db-wal
+*.db-shm
+.ledger.jsonl
+.leases/
+.previewer-token
+
+# Personal artifacts
+*.pdf
+!templates/**/*.pdf
+profile.yaml
+rules.yaml
+voice.md
+knowledge-base.md
+
+# macOS / editors
+.DS_Store
+*~
+.vscode/
+.idea/
+
+# node
+node_modules/
+npm-debug.log*

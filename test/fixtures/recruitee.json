@@ -1,0 +1,45 @@
+{
+  "offers": [
+    {
+      "id": 1580123,
+      "slug": "platform-engineer",
+      "title": "Platform Engineer",
+      "description": "<p>Kestrel Health runs scheduling for outpatient clinics.</p><p>You will own the appointment service.</p>",
+      "requirements": "<ul><li>Five years with Go or TypeScript</li></ul>",
+      "location": "Amsterdam",
+      "city": "Amsterdam",
+      "country": "Netherlands",
+      "country_code": "NL",
+      "remote": false,
+      "department": "Engineering",
+      "employment_type_code": "fulltime",
+      "experience_code": "mid_level",
+      "created_at": "2026-06-30 09:00:00 UTC",
+      "published_at": "2026-07-01 09:00:00 UTC",
+      "careers_url": "https://kestrelhealth.recruitee.com/o/platform-engineer",
+      "careers_apply_url": "https://kestrelhealth.recruitee.com/o/platform-engineer/c/new",
+      "min_salary": 70000,
+      "max_salary": 90000,
+      "currency": "EUR",
+      "salary_period": "per year"
+    },
+    {
+      "id": 1580124,
+      "slug": "senior-frontend-engineer",
+      "title": "Senior Frontend Engineer",
+      "description": "<p>Own the patient-facing booking flow. Fully remote inside the EU.</p>",
+      "requirements": "",
+      "location": "Remote",
+      "city": "",
+      "country": "Netherlands",
+      "country_code": "NL",
+      "remote": true,
+      "department": "Engineering",
+      "employment_type_code": "fulltime",
+      "created_at": "2026-07-10 09:00:00 UTC",
+      "published_at": "2026-07-10 09:00:00 UTC",
+      "careers_url": "https://kestrelhealth.recruitee.com/o/senior-frontend-engineer",
+      "careers_apply_url": "https://kestrelhealth.recruitee.com/o/senior-frontend-engineer/c/new"
+    }
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "4bb75392-550e-4637-8560-003650c621d6",
+      "title": "Founding Engineer",
+      "department": "Engineering",
+      "team": "Founding",
+      "employmentType": "FullTime",
+      "location": "San Francisco, CA",
+      "secondaryLocations": [],
+      "publishedAt": "2026-07-18T17:00:00.000Z",
+      "isListed": true,
+      "isRemote": false,
+      "jobUrl": "https://jobs.ashbyhq.com/tidepool/4bb75392-550e-4637-8560-003650c621d6",
+      "applyUrl": "https://jobs.ashbyhq.com/tidepool/4bb75392-550e-4637-8560-003650c621d6/application",
+      "descriptionPlain": "Tidepool Analytics turns satellite imagery into flood risk models. You will be employee number five and own the ingest pipeline.",
+      "compensation": {
+        "compensationTierSummary": "$170K - $210K + 0.5% - 1.0%",
+        "summaryComponents": [
+          {
+            "summary": "$170K - $210K",
+            "compensationType": "Salary",
+            "interval": "1 YEAR",
+            "currencyCode": "USD",
+            "minValue": 170000,
+            "maxValue": 210000
+          },
+          {
+            "summary": "0.5% - 1.0%",
+            "compensationType": "EquityPercentage",
+            "interval": "NONE",
+            "currencyCode": null,
+            "minValue": 0.5,
+            "maxValue": 1
+          }
+        ],
+        "compensationTiers": []
+      }
+    },
+    {
+      "id": "9de10b77-2a41-4c88-b0f3-6ee2a7c51b04",
+      "title": "Senior Infrastructure Engineer",
+      "department": "Engineering",
+      "team": "Platform",
+      "employmentType": "FullTime",
+      "location": "Remote, United States",
+      "secondaryLocations": [],
+      "publishedAt": "2026-07-02T12:00:00.000Z",
+      "isListed": true,
+      "isRemote": true,
+      "jobUrl": "https://jobs.ashbyhq.com/tidepool/9de10b77-2a41-4c88-b0f3-6ee2a7c51b04",
+      "applyUrl": "https://jobs.ashbyhq.com/tidepool/9de10b77-2a41-4c88-b0f3-6ee2a7c51b04/application",
+      "descriptionPlain": "Own the Kubernetes footprint and the data lake that feeds the flood models.",
+      "compensation": { "summaryComponents": [], "compensationTiers": [] }
+    },
+    {
+      "id": "0000aaaa-1111-bbbb-2222-cccc3333dddd",
+      "title": "Unlisted Draft Role",
+      "location": "Nowhere",
+      "isListed": false,
+      "jobUrl": "https://jobs.ashbyhq.com/tidepool/0000aaaa-1111-bbbb-2222-cccc3333dddd",
+      "applyUrl": "https://jobs.ashbyhq.com/tidepool/0000aaaa-1111-bbbb-2222-cccc3333dddd/application",
+      "descriptionPlain": "Should never be returned by the adapter."
+    }
+  ]
+}

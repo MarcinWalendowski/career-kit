@@ -1,0 +1,162 @@
+# rules.yaml - the doctrine, as data.
+#
+# Copy this to $CAREER_HOME/rules.yaml and edit it. Every rule below carries a
+# one-line WHY, and that is deliberate: these rules were expensive to learn, and
+# a rule with no stated reason gets deleted by the first person who finds it
+# inconvenient. If you change a value, change the comment too.
+#
+# The engine reads this file. `engine/gate.mjs` enforces it behind exit codes
+# (0 allowed, 2 usage error, 3 blocked), so a rule here is not advice to a
+# model. It is a check that has to pass before an irreversible action happens.
+
+# draft    - write everything, send nothing. Every send channel blocks.
+# review   - draft, then wait for a human to approve each send.
+# autopilot- send without asking, but only on the channels named below.
+#
+# WHY review is the shipped default: this tool sends mail from your account and
+# submits forms under your name. A form submit has no Sent folder and no undo,
+# so the first bad run is not a bug report, it is your reputation. Autopilot is
+# one line away when you want it, and it needs two edits, not one.
+#
+# NOTE: `career-setup` provisions a NEW workspace at `mode: draft`, one step
+# below this file. That difference is on purpose. This template documents the
+# intended steady state; the provisioner starts you below it and tells you the
+# single line to change once you have read a few drafts you agree with.
+mode: review
+
+# Explicit per-channel opt-in, e.g. [email] or [email, form]. Empty means no
+# channel is autopiloted even when `mode: autopilot`.
+# WHY two switches instead of one: the blast radius of email and of an ATS form
+# are different, and you should be able to trust one without trusting both.
+autopilot_channels: []
+
+limits:
+  # WHY a daily cap: a runaway loop is discovered by a human, and the cap is
+  # what decides whether they discover it after 8 applications or after 400.
+  maxPerDay: 8
+  # WHY a minimum gap: a burst of identical-looking sends inside one minute is
+  # what spam filtering is built to catch, and it reads as automation to a human
+  # skimming a shared inbox.
+  minGapMinutes: 4
+  # WHY per-source caps: one source going wrong should not consume the whole
+  # day's budget before you notice the roles it returned were the wrong shape.
+  perSourcePerDay: { linkedin: 5, hn: 10 }
+
+company:
+  # WHY exactly one: a second email costs more than the mistake it is fixing. To
+  # someone skimming an inbox, a correction reads as noise from a candidate who
+  # does not check their work, and it turns one good impression into two
+  # mediocre ones. If the first send was wrong, record what happened and report
+  # it. Do not try to repair it with another send.
+  maxApplications: 1
+  # WHY a cooldown rather than a permanent ban: re-applying a year later is
+  # normal. Re-applying next week is not.
+  cooldownDays: 365
+  # WHY no follow-ups: same reason as above, and it removes the judgement call
+  # about whether "just checking in" counts as a second contact. It does.
+  followups_allowed: false
+
+roles:
+  # WHY an allow list at all: an application to a role your CV does not support
+  # is dead on arrival and it spends a first impression at a company where a
+  # different req would have landed.
+  allow:
+    - software engineer
+    - senior engineer
+    - staff engineer
+    - founding engineer
+    - member of technical staff
+    - full stack
+    - backend
+    - platform
+    - infrastructure
+    - applied ai
+    - agent engineer
+
+  # WHY a deny list on top: when a company posts several reqs, something has to
+  # pick. Without this, the most recently read posting wins.
+  #
+  # THIS LIST IS YOUR CALL. The entries below are a starter set from a backend
+  # and platform search; they are commented out because "never apply to ML" is
+  # correct for one person and absurd for another. Uncomment what genuinely does
+  # not fit you, and delete the rest.
+  deny: []
+  # deny:
+  #   - machine learning engineer
+  #   - ml engineer
+  #   - research scientist
+  #   - design engineer
+  #   - product designer
+  #   - engineering manager
+  #
+  # A deny list only works if you check what the apply link actually SUBMITS,
+  # not just the page you read. One company's backend posting linked to a
+  # typeform with `#role=machine+learning+engineer` still in the anchor, a
+  # copy-paste slip from their ML page. Following that link as-is files you as
+  # an ML applicant no matter which posting you read.
+
+content:
+  # WHY: the em dash reads as an AI tell, and copy meant to sound like a person
+  # cannot afford one. The fix is always to re-punctuate, never to reword: a
+  # comma, a colon, a full stop or brackets does the job.
+  #
+  # Written as a Unicode escape, not as the glyph, so that this file passes its
+  # own rule and so that `grep` for the character finds real copy and not the
+  # rule banning it. Readers must decode \uXXXX inside double quotes; the
+  # spelling "U+2014" is accepted as a fallback.
+  banned_characters: ["\u2014"]
+
+  # WHY: filler that says nothing tells a reader you wrote for a template and
+  # not for them.
+  banned_phrases:
+    - "I hope this email finds you well"
+    - "circle back"
+    - "leverage"
+    - "excited to"
+    - "synergies"
+
+  # WHY a hard ceiling: long and thorough is the failure mode here, not the
+  # goal. A first draft that ran four blocks and around 420 words was rejected
+  # for reading "too generative". The person reading skims; the CV carries the
+  # detail. Greeting, the one-line close and the sign-off do not count.
+  max_sections: 2
+  max_sentences: 8
+
+cv:
+  # WHY false: one canonical CV means every reader sees the same document, and
+  # it removes a slow, error-prone regeneration step whose output nobody asked
+  # for. Put the role-specific work in the email, which is the part a human
+  # actually reads first. Set true only if you genuinely rebuild per role.
+  regenerate_per_role: false
+
+# WHY a lease at all: `claim` writes an intent file before the action, with an
+# atomic exclusive create. A second agent claiming the same target gets EEXIST
+# and blocks. This is the one part of the design that is a lock rather than a
+# convention.
+lease:
+  # How long a claim token stays valid. `record` refuses a token older than
+  # this, which structurally enforces "re-check immediately before acting"
+  # instead of asking for it in prose. The gap between check and act is the
+  # entire window in which a duplicate is born, so the gate measures it.
+  seconds: 600
+
+clock:
+  # WHY: a local wall-clock time stamped "Z" in a UTC+2 zone lands two hours in
+  # the future. That exact bug put 23 wrong timestamps in one tracker. A send
+  # time further ahead than this is rejected rather than stored.
+  skewSeconds: 300
+
+receipts:
+  # WHY: email has a Sent folder, so a duplicate is at least detectable after
+  # the fact. A form submit produces nothing durable. On these channels `record`
+  # requires a receipt file that exists and is non-empty; without one the record
+  # lands as `sent-unverified` with `needs_human: true` and surfaces in review.
+  required_channels:
+    - form
+    - ats-ashby
+    - ats-greenhouse
+    - ats-lever
+    - ats-workable
+    - ats-smartrecruiters
+    - ats-recruitee
+    - ats-workday

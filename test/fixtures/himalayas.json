@@ -1,0 +1,39 @@
+{
+  "offset": 0,
+  "limit": 20,
+  "total": 2,
+  "jobs": [
+    {
+      "guid": "himalayas-330011",
+      "title": "Senior Software Engineer, Billing",
+      "companyName": "Saltmarsh",
+      "companyLogo": "https://himalayas.app/logo.png",
+      "excerpt": "Own the metering and invoicing services.",
+      "description": "<p>Saltmarsh sells usage-based billing infrastructure to API companies.</p>",
+      "pubDate": 1784851200,
+      "expiryDate": 1787443200,
+      "applicationLink": "https://saltmarsh.example/careers/senior-software-engineer-billing",
+      "employmentType": "Full Time",
+      "seniority": ["Senior"],
+      "categories": ["Software Engineering"],
+      "locationRestrictions": ["United States", "Canada"],
+      "minSalary": 150000,
+      "maxSalary": 190000
+    },
+    {
+      "guid": "himalayas-330012",
+      "title": "Founding Engineer",
+      "companyName": "Petrichor",
+      "excerpt": "First engineering hire.",
+      "description": "<p>Petrichor is building weather models for vineyards.</p>",
+      "pubDate": 1784419200,
+      "applicationLink": "https://jobs.ashbyhq.com/petrichor/aa11bb22-cc33-dd44-ee55-ff6677889900",
+      "employmentType": "Full Time",
+      "seniority": [],
+      "categories": ["Software Engineering"],
+      "locationRestrictions": [],
+      "minSalary": null,
+      "maxSalary": null
+    }
+  ]
+}

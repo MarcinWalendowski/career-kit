@@ -1,0 +1,53 @@
+{
+  "_fixture": {
+    "captured": "2026-07-28",
+    "endpoint": "https://hn.algolia.com/api/v1/search_by_date?tags=comment,story_41000001",
+    "note": "Five comments: pipe format with an ATS link, pipe format with an address, prose, an unparseable aside, and a reply that must be ignored."
+  },
+  "hits": [
+    {
+      "objectID": "41000101",
+      "story_id": 41000001,
+      "parent_id": 41000001,
+      "author": "acme_cto",
+      "created_at": "2026-07-01T16:12:00.000Z",
+      "comment_text": "Acme Robotics | Senior Backend Engineer | Berlin, Germany | ONSITE | Full-time | EUR 90k - 120k<p>We build warehouse picking arms and we need someone to own fleet scheduling.<p>Apply here: <a href=\"https://boards.greenhouse.io/acmerobotics/jobs/4001\" rel=\"nofollow\">https://boards.greenhouse.io/acmerobotics/jobs/4001</a>"
+    },
+    {
+      "objectID": "41000102",
+      "story_id": 41000001,
+      "parent_id": 41000001,
+      "author": "northwind_ada",
+      "created_at": "2026-07-01T16:30:00.000Z",
+      "comment_text": "Northwind Labs | Founding Engineer | Remote (EU) | Full-time<p>We are four people building a differential sync engine. Mail careers@northwind.example with anything you have shipped."
+    },
+    {
+      "objectID": "41000103",
+      "story_id": 41000001,
+      "parent_id": 41000001,
+      "author": "tidepool_hiring",
+      "created_at": "2026-07-01T17:05:00.000Z",
+      "comment_text": "Tidepool Analytics is hiring a Senior Infrastructure Engineer to own our Kubernetes footprint.<p>We are remote-first across the US and Canada.<p><a href=\"https://tidepool.example/careers\" rel=\"nofollow\">https://tidepool.example/careers</a>"
+    },
+    {
+      "objectID": "41000104",
+      "story_id": 41000001,
+      "parent_id": 41000001,
+      "author": "curious_reader",
+      "created_at": "2026-07-01T18:00:00.000Z",
+      "comment_text": "Does anyone know whether these threads are still worth reading? I sent four applications last month and never heard back from any of them."
+    },
+    {
+      "objectID": "41000105",
+      "story_id": 41000001,
+      "parent_id": 41000101,
+      "author": "someone_else",
+      "created_at": "2026-07-01T19:00:00.000Z",
+      "comment_text": "Umbra Systems | Site Reliability Engineer | Warsaw | Full-time<p>This is a reply to another comment, not a top-level posting, and must not be read as one."
+    }
+  ],
+  "nbHits": 5,
+  "page": 0,
+  "nbPages": 1,
+  "hitsPerPage": 500
+}

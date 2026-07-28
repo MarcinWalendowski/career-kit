@@ -1,0 +1,31 @@
+{
+  "_fixture": {
+    "captured": "2026-07-28",
+    "note": "Browser capture of a justjoin.it results page. No endpoint is called for this; the board has no documented public API."
+  },
+  "source": "justjoin",
+  "captured_at": "2026-07-28T10:05:00Z",
+  "page_url": "https://justjoin.it/all-locations/backend",
+  "items": [
+    {
+      "id": "wiatrak-backend-engineer",
+      "title": "Backend Engineer",
+      "company": "Wiatrak",
+      "location": "Warsaw",
+      "workplace_type": "Hybrid",
+      "salary_text": "18 000 - 25 000 PLN/mth net (B2B)",
+      "url": "https://justjoin.it/offers/wiatrak-backend-engineer",
+      "description": "Wiatrak builds fleet telematics for regional bus operators."
+    },
+    {
+      "id": "kamien-senior-platform-engineer",
+      "title": "Senior Platform Engineer",
+      "company": "Kamien Software",
+      "location": "Krakow",
+      "workplace_type": "Remote",
+      "salary_text": "22 000 - 28 000 PLN",
+      "url": "https://justjoin.it/offers/kamien-senior-platform-engineer",
+      "description": "Own the Kubernetes platform and the CI fleet."
+    }
+  ]
+}

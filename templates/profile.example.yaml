@@ -1,0 +1,65 @@
+# profile.yaml - the single answer to every identity question a form can ask.
+#
+# Copy this to $CAREER_HOME/profile.yaml and replace every value. The persona
+# below is fictional on purpose: if you ever see "Ada Lovelace" in a draft, the
+# import did not finish and nothing should be sent.
+#
+# WHY THIS FILE EXISTS AT ALL
+# ---------------------------
+# Nothing here is decided at send time. An agent filling an application form
+# READS these values; it never judges them in the moment.
+#
+# That rule is not tidiness. One company once received two applications for the
+# same role, seven minutes apart, with contradictory answers to "can you work
+# from our office five days a week": one actor answered no and explained, the
+# other answered yes and offered to relocate. Neither was lying. Both were
+# deciding, independently, at the moment the form asked. `relocation` and
+# `work_authorization` below are the fix. Two agents filling the same form on
+# different days cannot contradict each other if neither is allowed to choose.
+#
+# If a form asks something this file does not answer, that is a gap in this
+# file. Add the field here. Do not answer it from memory.
+
+name: Ada Lovelace
+preferred_name: Ada
+email: ada@example.com
+phone: "+44 20 7946 0000" # quoted: an unquoted leading + is not valid YAML
+
+location:
+  city: London
+  region: England
+  country: United Kingdom
+  timezone: Europe/London
+
+links:
+  linkedin: https://linkedin.com/in/example
+  github: https://github.com/example
+  site: https://example.com
+
+# One entry per region a posting can be in. `status` is a fact about you, not a
+# preference: citizen | permanent-resident | visa-holder | visa-required | none.
+# `sponsorship_needed` is the answer to the question every ATS asks in its own
+# wording ("will you now or in the future require sponsorship").
+work_authorization:
+  - { region: UK, status: citizen }
+  - { region: US, status: visa-required, sponsorship_needed: true }
+  - { region: EU, status: none }
+
+# `willing` is the yes/no a radio button gets. `notes` is what a free-text box
+# gets. Keep them consistent with each other; a form often asks both.
+relocation:
+  willing: false
+  notes: "Open to travel for onsites. Not relocating in 2026."
+
+notice_period: "4 weeks"
+
+# The account outbound mail is sent from. `from_name` is the display name a
+# recipient sees, so it should match the name on the CV.
+mail:
+  account: ada@example.com
+  from_name: Ada Lovelace
+
+# Paths are relative to $CAREER_HOME. The CV is attached as-is; see
+# `cv.regenerate_per_role` in rules.yaml for why it is not rebuilt per role.
+attachments:
+  cv: cv/Ada Lovelace CV 2026.pdf

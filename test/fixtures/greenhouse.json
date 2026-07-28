@@ -1,0 +1,58 @@
+{
+  "_fixture": {
+    "captured": "2026-07-28",
+    "endpoint": "https://boards-api.greenhouse.io/v1/boards/acmerobotics/jobs?content=true",
+    "note": "Synthetic. Fictional companies on the reserved .example TLD."
+  },
+  "jobs": [
+    {
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/4001",
+      "internal_job_id": 3001,
+      "id": 4001,
+      "location": { "name": "Berlin, Germany" },
+      "metadata": [],
+      "requisition_id": "R-11",
+      "title": "Senior Backend Engineer",
+      "updated_at": "2026-07-20T10:00:00-04:00",
+      "departments": [{ "id": 1, "name": "Engineering", "child_ids": [], "parent_id": null }],
+      "offices": [{ "id": 9, "name": "Berlin", "location": "Berlin, Germany" }],
+      "content": "&lt;p&gt;Acme Robotics builds warehouse picking arms. This role is hybrid, three days a week in our Berlin office.&lt;/p&gt;&lt;p&gt;You will own the fleet scheduling service.&lt;/p&gt;",
+      "pay_input_ranges": [
+        {
+          "blurb": "",
+          "currency_type": "EUR",
+          "min_cents": 9000000,
+          "max_cents": 12000000,
+          "title": "Salary"
+        }
+      ]
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/4002",
+      "internal_job_id": 3002,
+      "id": 4002,
+      "location": { "name": "Remote - EU" },
+      "metadata": [],
+      "requisition_id": "R-12",
+      "title": "Member of Technical Staff",
+      "updated_at": "2026-07-22T09:30:00-04:00",
+      "departments": [{ "id": 1, "name": "Engineering", "child_ids": [], "parent_id": null }],
+      "offices": [],
+      "content": "&lt;p&gt;Work on the control plane. Fully remote within the EU.&lt;/p&gt;"
+    },
+    {
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/4003",
+      "internal_job_id": 3003,
+      "id": 4003,
+      "location": { "name": "New York, NY" },
+      "metadata": [],
+      "requisition_id": "R-13",
+      "title": "Product Designer",
+      "updated_at": "2026-06-01T09:30:00-04:00",
+      "departments": [{ "id": 2, "name": "Design", "child_ids": [], "parent_id": null }],
+      "offices": [],
+      "content": "&lt;p&gt;Own the operator console. In-office five days a week.&lt;/p&gt;"
+    }
+  ],
+  "meta": { "total": 3 }
+}

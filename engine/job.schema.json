@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "career-kit/job-record",
+  "title": "Job record",
+  "description": "One target, one file, one writer: jobs/<id>.json. Every enum here used to be a comment in a SQL schema, which is how a channel column ended up holding a sentence. Descriptive text belongs in notes, evidence, incidents or escalations. Human pipeline state (stage, priority, salary expectation, human notes) is NOT here: it lives in career.db, where a rebuild never touches it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "company", "company_id", "domains", "role", "source", "apply", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "description": "<company>-<role-slug>[-<n>]. Deliberately NOT equal to company_id: re-applying to a company next year is normal, and one-per-company is a gate policy, not a primary key."
+    },
+    "company": { "type": "string" },
+    "company_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._-]*$" },
+    "domains": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Every domain that legitimately means this company. The identity guard checks a resolved route against this list, because an ATS board slug is not proof of who owns it."
+    },
+    "role": { "type": "string" },
+    "seniority": { "type": ["string", "null"] },
+    "source": { "type": "string", "description": "Adapter id: greenhouse, lever, ashby, hn, linkedin, manual." },
+    "source_id": { "type": ["string", "null"] },
+    "url": { "type": ["string", "null"] },
+
+    "apply": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["channel"],
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "email",
+            "form",
+            "ats-ashby",
+            "ats-greenhouse",
+            "ats-lever",
+            "ats-workable",
+            "ats-smartrecruiters",
+            "ats-recruitee",
+            "ats-workday",
+            "linkedin",
+            "imessage",
+            "referral",
+            "none"
+          ]
+        },
+        "target": { "type": ["string", "null"], "description": "Address or form URL." },
+        "route_confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "identity_verified": { "type": ["boolean", "null"] },
+        "identity_domain": { "type": ["string", "null"] }
+      }
+    },
+
+    "location": { "type": ["string", "null"] },
+    "workplace_type": { "type": "string", "enum": ["onsite", "hybrid", "remote", "unknown"] },
+
+    "posted_comp": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "description": "Read off the posting by the adapter that fetched it. A field the posting did not state stays null; it never becomes a guess.",
+      "properties": {
+        "currency": { "type": ["string", "null"] },
+        "min": { "type": ["number", "null"] },
+        "max": { "type": ["number", "null"] },
+        "period": { "type": ["string", "null"], "enum": ["year", "month", "week", "day", "hour", null] },
+        "equity": { "type": ["string", "null"] }
+      }
+    },
+
+    "status": {
+      "type": "string",
+      "enum": [
+        "discovered",
+        "screened",
+        "drafted",
+        "claimed",
+        "sent",
+        "sent-unverified",
+        "skipped",
+        "failed"
+      ]
+    },
+    "sent_at": { "type": ["string", "null"], "format": "date-time" },
+    "sent_at_source": {
+      "type": ["string", "null"],
+      "enum": ["transport", null],
+      "description": "Only a transport (SMTP response, ATS confirmation) may stamp this. A client clock produced a whole sweep of CEST times labelled Z."
+    },
+    "message_id": { "type": ["string", "null"] },
+    "subject": { "type": ["string", "null"] },
+    "receipt": { "type": ["string", "null"], "description": "Path under outputs/receipts/<id>/, copied there by gate record." },
+    "needs_human": { "type": ["boolean", "null"] },
+    "duplicate_submission": { "type": ["boolean", "null"] },
+
+    "notes": { "type": ["string", "null"], "description": "Free prose lives here and only here." },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/entry" } },
+    "incidents": { "type": "array", "items": { "$ref": "#/$defs/entry" } },
+    "escalations": { "type": "array", "items": { "$ref": "#/$defs/entry" } },
+
+    "discovered_at": { "type": ["string", "null"], "format": "date-time" },
+    "updated_at": { "type": ["string", "null"], "format": "date-time" }
+  },
+
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["at", "kind", "text"],
+      "description": "One dated observation. Three arrays instead of one prose blob, because the record that motivated this held 4,000 characters of correction, rewrite history, a declined request and an operational warning in a single notes string.",
+      "properties": {
+        "at": { "type": "string", "format": "date-time" },
+        "kind": { "type": "string" },
+        "text": { "type": "string" }
+      }
+    }
+  }
+}
