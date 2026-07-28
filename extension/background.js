@@ -69,11 +69,20 @@ async function ingest(payload) {
   } catch {
     body = {};
   }
-  // serve.mjs answers {ok, ingested, ids, dir}. Read `ingested` rather than the
-  // count we sent: the server drops a record it cannot read, and a popup that
-  // reports what it POSTed would claim 23 captures on a run that wrote 21.
-  const written = typeof body.ingested === "number" ? body.ingested : payload.jobs.length;
-  return { ok: true, written, dropped: Math.max(0, payload.jobs.length - written), dir: body.dir || null };
+  // serve.mjs answers {ok, written, skipped, ids, skippedDetail, dir}. Read
+  // `written` rather than the count we sent: the server drops a record it
+  // cannot read, and a popup that reports what it POSTed would claim 23
+  // captures on a run that wrote 21.
+  //
+  // The fallback is deliberately the pessimistic direction. If the field ever
+  // goes missing we report the POSTed count, which OVERstates, so the failure
+  // is visible in the inbox rather than silent. test/integration.test.mjs
+  // asserts the field name matches so it should never come to that.
+  const written = typeof body.written === "number" ? body.written : payload.jobs.length;
+  const skipped = typeof body.skipped === "number"
+    ? body.skipped
+    : Math.max(0, payload.jobs.length - written);
+  return { ok: true, written, dropped: skipped, dir: body.dir || null };
 }
 
 async function health() {

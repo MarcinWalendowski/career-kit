@@ -240,7 +240,7 @@ describe("ingest", () => {
       },
     });
     assert.equal(r.status, 200);
-    assert.equal(r.data.ingested, 2);
+    assert.equal(r.data.written, 2);
 
     const inbox = readdirSync(join(home, "jobs", "inbox"));
     assert.equal(inbox.length, 2);
@@ -253,6 +253,48 @@ describe("ingest", () => {
     assert.equal(record.status, "discovered");
     assert.equal(record.source, "linkedin");
     assert.ok(record.captured_at);
+  });
+
+  it("answers the extension's contract: any extension origin, {written, skipped}, channel none", async () => {
+    // The extension's service worker sends Origin chrome-extension://<id>, and
+    // an unpacked extension gets a new id on every install. Pinning one id
+    // would break the first thing a new user does and would buy nothing: an id
+    // is not a secret, the token is what authorises the call.
+    const r = await call({
+      path: "/api/ingest",
+      method: "POST",
+      headers: { Origin: "chrome-extension://abcdefghijklmnopqrstuvwxyzabcdef" },
+      body: {
+        source: "linkedin",
+        url: "https://www.linkedin.com/jobs/search",
+        jobs: [{ company: "Punch Card Co", role: "Engineer" }, "not an object"],
+      },
+    });
+    assert.equal(r.status, 200);
+    assert.equal(r.data.written, 1);
+    assert.equal(r.data.skipped, 1);
+    assert.equal(r.headers["access-control-allow-origin"], "chrome-extension://abcdefghijklmnopqrstuvwxyzabcdef");
+
+    const record = JSON.parse(readFileSync(join(home, "jobs", "inbox", "punch-card-co-engineer.json"), "utf8"));
+    assert.equal(record.status, "discovered");
+    // Triage resolves the route later. The capture must not guess one.
+    assert.equal(record.apply.channel, "none");
+    assert.equal(record.url, "https://www.linkedin.com/jobs/search");
+  });
+
+  it("answers a preflight from an extension origin and refuses one from a web page", async () => {
+    const ok = await call({
+      path: "/api/ingest", method: "OPTIONS", token: null,
+      headers: { Origin: "chrome-extension://aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+    });
+    assert.equal(ok.status, 204);
+    assert.match(ok.headers["access-control-allow-headers"], /X-Career-Token/i);
+
+    const bad = await call({
+      path: "/api/ingest", method: "OPTIONS", token: null,
+      headers: { Origin: "https://jobs.example.com" },
+    });
+    assert.equal(bad.status, 403);
   });
 
   it("rejects an ingest with no Origin", async () => {

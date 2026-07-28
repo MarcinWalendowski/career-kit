@@ -395,6 +395,34 @@ test("the extension and the server agree on the default port", () => {
   assert.equal(Number(shown[1]), server);
 });
 
+test("the extension reads the field names the server actually sends", async () => {
+  // The port agreement has a test; the payload agreement did not. The server
+  // briefly sent `ingested` and `written` carrying the same number, which is
+  // how one of them gets updated and the other rots. Reading a field the server
+  // stopped sending is silent here: background.js falls back to the count it
+  // POSTed, so a run that wrote 21 of 23 reports 23 and the two dropped records
+  // are never chased.
+  const serve = readFileSync(join(KIT, "engine/serve.mjs"), "utf8");
+  const bg = readFileSync(join(KIT, "extension/background.js"), "utf8");
+
+  // What the ingest handler actually puts on the wire.
+  const block = /return send\(res, 200, \{([\s\S]*?)\}, headers\);/.exec(serve);
+  assert.ok(block, "could not find the ingest response; this test cannot check the agreement");
+  const sent = new Set([...block[1].matchAll(/^\s*([a-zA-Z]+):/gm)].map((m) => m[1]));
+
+  // Scope to the ingest() function. background.js also talks to /api/health,
+  // which sends a different shape, and comparing every body.* in the file
+  // against the ingest response reports health fields as missing.
+  const ingestFn = /async function ingest\([\s\S]*?\n\}/.exec(bg);
+  assert.ok(ingestFn, "could not find ingest() in background.js");
+
+  for (const field of [...ingestFn[0].matchAll(/body\.([a-zA-Z]+)/g)].map((m) => m[1])) {
+    assert.ok(sent.has(field), `background.js reads body.${field}, which /api/ingest does not send`);
+  }
+  // And no duplicate-meaning pair sneaks back in.
+  assert.ok(!sent.has("ingested") || !sent.has("written"), "two field names for one count");
+});
+
 test("the extension can reach only the local machine", () => {
   // The defensibility of the LinkedIn source rests on this being structural.
   const manifest = JSON.parse(readFileSync(join(KIT, "extension/manifest.json"), "utf8"));

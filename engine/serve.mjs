@@ -471,11 +471,14 @@ export async function startServer(options = {}) {
         written.push(id);
       });
       const headers = { "Access-Control-Allow-Origin": origin };
+      // One name per number. `ingested` used to sit here alongside `written`
+      // carrying the identical value, which is how a reader picks the wrong one
+      // and how the two drift the first time only one is updated. Nothing has
+      // shipped yet, so there is no reason to keep both.
       return send(res, 200, {
         ok: true,
         written: written.length,
         skipped: skipped.length,
-        ingested: written.length,
         ids: written,
         skippedDetail: skipped,
         dir: P.jobsInbox,
