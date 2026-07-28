@@ -17,7 +17,8 @@ import { request as httpRequest } from "node:http";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { startServer } from "../engine/serve.mjs";
+import { readAudiences, startServer } from "../engine/serve.mjs";
+import { paths } from "../engine/paths.mjs";
 
 const KB = [
   "# Ada Lovelace",
@@ -398,6 +399,46 @@ describe("binding", () => {
     } finally {
       await second.close();
       writeFileSync(join(home, ".previewer-token"), server.token + "\n", { mode: 0o600 });
+    }
+  });
+});
+
+/*
+ * readAudiences takes the first paragraph under each variant heading. In the
+ * shipped scaffold that paragraph is an authoring comment, so without masking
+ * the audience toggle offers the comment as the variant's own text.
+ */
+describe("readAudiences and an authoring comment", () => {
+  it("does not offer the section's comment as an audience's text", () => {
+    const dir = mkdtempSync(join(tmpdir(), "aud-"));
+    try {
+      writeFileSync(
+        join(dir, "knowledge-base.md"),
+        // The comment sits under the "###", which is where the shipped
+        // scaffold's does. Put it above and this test passes with or without
+        // the mask, because the first paragraph is only captured after a "###".
+        [
+          "## Framing variants",
+          "",
+          "### Startup framing",
+          "",
+          "<!--",
+          "  Guidance for whoever edits this file.",
+          "-->",
+          "",
+          "Ships fast, owns the whole thing.",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      const { audiences, source } = readAudiences(paths(dir));
+      assert.equal(source, "knowledge-base.md");
+      const startup = audiences.find((a) => a.label === "Startup framing");
+      assert.ok(startup, "the variant heading was not picked up");
+      assert.equal(startup.text, "Ships fast, owns the whole thing.");
+      assert.ok(!/Guidance for whoever edits/.test(startup.text), "the comment became the text");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

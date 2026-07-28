@@ -309,6 +309,29 @@ describe("applyAnchorEdit", () => {
     const { anchors } = documentFromMarkdown(KB);
     assert.equal(applyAnchorEdit(KB, anchors, "nope-1", "x"), null);
   });
+
+  // The negative control for masking. Dropping comment lines before the parse
+  // would leave every anchor below the comment pointing N lines too high, and
+  // an edit made in the previewer would land on an unrelated line of the user's
+  // knowledge base. A comment is placed above the bullets on purpose.
+  it("edits the right line when a multi-line comment sits above the target", () => {
+    const commented = KB.replace(
+      "### Analytical Engines Ltd",
+      "<!--\n  Six lines of authoring guidance.\n\n  Spanning a blank line, as the scaffold's does.\n-->\n\n### Analytical Engines Ltd",
+    );
+    const { anchors } = documentFromMarkdown(commented);
+    const bullet = anchors.find((a) => a.text.startsWith("Shipped"));
+    const next = applyAnchorEdit(commented, anchors, bullet.aid, "Shipped the first program");
+
+    assert.ok(next.includes("- Shipped the first program"), "the edit did not land");
+    assert.ok(!next.includes("first** program and its notes"), "the old bullet survived");
+    assert.ok(
+      next.includes("Six lines of authoring guidance."),
+      "the edit overwrote the comment instead of the bullet",
+    );
+    assert.ok(next.includes("Cut the punch-card cycle"), "a neighbouring line was clobbered");
+    assert.equal(next.split("\n").length, commented.split("\n").length);
+  });
 });
 
 describe("parseColor", () => {
@@ -381,6 +404,52 @@ describe("sectionBody", () => {
   it("returns an empty string for a heading that is not there", () => {
     assert.equal(sectionBody(md, "Three"), "");
   });
+
+  it("drops an authoring comment instead of pasting it into the brief", () => {
+    const withComment =
+      "## Framing\n\n<!--\n  A note to whoever edits this file.\n\n  It spans a blank line.\n-->\n\nThe real body.\n";
+    const body = sectionBody(withComment, "Framing");
+    assert.ok(body.includes("The real body."));
+    assert.ok(!body.includes("A note to whoever edits"), "comment text reached the brief");
+    assert.ok(!body.includes("It spans a blank line"), "a later comment line survived");
+    assert.ok(!/<!--|-->/.test(body));
+  });
+
+  it("keeps a comment that is example text inside a fence", () => {
+    const fenced = "## Snippet\n\n```html\n<!-- this is the example -->\n```\n";
+    assert.ok(sectionBody(fenced, "Snippet").includes("<!-- this is the example -->"));
+  });
+
+  it("leaves the shipped scaffold's framing variants free of its own comment", () => {
+    const kb = readFileSync(
+      fileURLToPath(new URL("../templates/knowledge-base.scaffold.md", import.meta.url)),
+      "utf8",
+    );
+    const body = sectionBody(kb, "Framing variants");
+    assert.ok(body.includes("Blended (default)"), "the variants themselves must survive");
+    assert.ok(!/<!--|MUST live here/.test(body));
+  });
+});
+
+// The brief was only one of three surfaces that pasted the comment through. In
+// the HTML the markers come back escaped ("&lt;!--"), so what markdown hides in
+// the source renders as visible body text on the CV a screener reads.
+describe("rendered CV and an authoring comment", () => {
+  const scaffold = readFileSync(
+    fileURLToPath(new URL("../templates/knowledge-base.scaffold.md", import.meta.url)),
+    "utf8",
+  );
+
+  for (const target of ["html", "md"]) {
+    it(`keeps the comment out of target: ${target}`, () => {
+      const out = render(scaffold, { theme: "default", themeCss: "", shell: null, target });
+      const text = target === "md" ? out.md : out.html;
+      assert.ok(text, `render produced no ${target}`);
+      assert.ok(!text.includes("Never copy-paste them into a"), "comment prose reached the CV");
+      assert.ok(!/&lt;!--|<!--/.test(text), "a comment marker reached the CV");
+      assert.ok(text.includes("Blended (default)"), "the real content must survive");
+    });
+  }
 });
 
 /*

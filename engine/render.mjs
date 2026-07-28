@@ -743,7 +743,9 @@ function tableFields(src) {
  * with the same anchors rather than two renderings that can disagree.
  */
 export function documentFromMarkdown(kbText) {
-  const blocks = parseMarkdown(kbText);
+  // Masked, not stripped: the anchors below carry line indices that
+  // applyAnchorEdit splices into the unmasked original.
+  const blocks = parseMarkdown(maskHtmlComments(kbText));
   const anchors = [];
   const parts = {
     name: "", headline: "", contact: "",
@@ -1109,7 +1111,7 @@ export function applyAnchorEdit(kbText, anchors, aid, newText) {
 
 /** Rebuild markdown from the parsed blocks, so `target: "md"` is a render. */
 export function markdownFrom(kbText) {
-  const blocks = parseMarkdown(kbText);
+  const blocks = parseMarkdown(maskHtmlComments(kbText));
   const out = [];
   for (const b of blocks) {
     if (b.type === "hr") out.push("---");
@@ -1532,9 +1534,122 @@ function fillMarker(path) {
   return `[[FILL]] ${path} is missing from ${file}`;
 }
 
+/**
+ * Blank out HTML comments **without changing the line count**.
+ *
+ * Same intent as stripHtmlComments, but for the paths that parse the knowledge
+ * base for anchors. `documentFromMarkdown` records `block.start`/`block.end` as
+ * line indices, and `applyAnchorEdit` splices those indices into the *original*
+ * file. Remove lines before that parse and every anchor below the comment points
+ * N lines too high, so editing a bullet in the previewer silently overwrites
+ * something else in the knowledge base - the one file the whole product exists
+ * to keep true. Masking keeps one line per line, so the indices stay honest and
+ * the comment still never reaches an artifact.
+ *
+ * Partial lines are handled: a comment may open mid-line and close three lines
+ * later, and the text either side of it survives on its own line.
+ */
+export function maskHtmlComments(text) {
+  const lines = String(text || "").split("\n");
+  const out = [];
+  let fenced = false;
+  let inComment = false;
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      fenced = !fenced;
+      out.push(line);
+      continue;
+    }
+    if (fenced) {
+      out.push(line);
+      continue;
+    }
+    let rest = line;
+    let kept = "";
+    for (;;) {
+      if (inComment) {
+        const close = rest.indexOf("-->");
+        if (close < 0) {
+          rest = "";
+          break;
+        }
+        inComment = false;
+        rest = rest.slice(close + 3);
+        continue;
+      }
+      const open = rest.indexOf("<!--");
+      if (open < 0) {
+        kept += rest;
+        rest = "";
+        break;
+      }
+      kept += rest.slice(0, open);
+      rest = rest.slice(open + 4);
+      inComment = true;
+    }
+    out.push(kept);
+  }
+  return out.join("\n");
+}
+
+/**
+ * Drop HTML comments, outside fenced code blocks.
+ *
+ * A comment in the knowledge base is authoring guidance for whoever edits it,
+ * and markdown renders it invisible, so nobody sees it there. Pulled into the
+ * brief it becomes visible prose in the document an agent reads at every send,
+ * competing with the instructions that are supposed to be there. Inside a fence
+ * it is example text and stays.
+ *
+ * Use this only where line numbers do not matter - it removes lines. Anything
+ * that parses for anchors wants maskHtmlComments above.
+ */
+export function stripHtmlComments(text) {
+  const lines = String(text || "").split("\n");
+  const out = [];
+  let fenced = false;
+  let inComment = false;
+  for (const line of lines) {
+    if (/^\s*(```|~~~)/.test(line)) {
+      fenced = !fenced;
+      out.push(line);
+      continue;
+    }
+    if (fenced) {
+      out.push(line);
+      continue;
+    }
+    let rest = line;
+    let kept = "";
+    for (;;) {
+      if (inComment) {
+        const close = rest.indexOf("-->");
+        if (close < 0) {
+          rest = "";
+          break;
+        }
+        inComment = false;
+        rest = rest.slice(close + 3);
+        continue;
+      }
+      const open = rest.indexOf("<!--");
+      if (open < 0) {
+        kept += rest;
+        rest = "";
+        break;
+      }
+      kept += rest.slice(0, open);
+      rest = rest.slice(open + 4);
+      inComment = true;
+    }
+    if (kept.trim() || !line.trim()) out.push(kept);
+  }
+  return out.join("\n");
+}
+
 /** The body under a heading in a markdown file, as markdown. */
 export function sectionBody(mdText, heading) {
-  const blocks = parseMarkdown(mdText || "");
+  const blocks = parseMarkdown(stripHtmlComments(mdText));
   const want = String(heading).trim().toLowerCase();
   let collecting = false;
   let level = 0;

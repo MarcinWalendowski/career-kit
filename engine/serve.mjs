@@ -39,7 +39,9 @@ import {
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PLUGIN_ROOT, ensureRuntimeDirs, findCareerHome, paths, slug } from "./paths.mjs";
-import { HiddenTextError, applyAnchorEdit, parseMarkdown, render, scopeCss } from "./render.mjs";
+import {
+  HiddenTextError, applyAnchorEdit, maskHtmlComments, parseMarkdown, render, scopeCss,
+} from "./render.mjs";
 
 const DEFAULT_PORT = 7749;
 const PORT_TRIES = 20;
@@ -164,7 +166,10 @@ export function readAudiences(P) {
 
   const kb = readTextFile(P.kb);
   if (kb) {
-    const blocks = parseMarkdown(kb);
+    // The framing-variants section leads with an authoring comment. Without the
+    // mask the first "paragraph" under the heading is that comment, so the
+    // audience toggle offers it as the variant's text.
+    const blocks = parseMarkdown(maskHtmlComments(kb));
     let inSection = false;
     const found = [];
     let current = null;
