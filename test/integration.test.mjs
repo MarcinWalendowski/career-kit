@@ -283,6 +283,29 @@ test("every engine command a skill emits actually exists", () => {
   assert.ok(seen.size >= 6, `expected to find engine invocations in the skills, found ${seen.size}`);
 });
 
+test("every career-* command the README names is a skill that exists", () => {
+  // The sibling of the guard above, aimed the other way. That one checks what
+  // the skills call. This one checks what the README promises, which is the
+  // first thing a new user types. The README documented `career-serve` for the
+  // previewer while no such skill existed, so the headline feature had no
+  // working way to start and the suite was green throughout.
+  const readme = readFileSync(join(KIT, "README.md"), "utf8");
+  const skills = new Set(readdirSync(join(KIT, "skills")));
+
+  const named = new Set();
+  for (const m of readme.matchAll(/`(career-[a-z]+)`/g)) named.add(m[1]);
+  // Also the bare-word form the quickstart block uses, inside fences.
+  for (const m of readme.matchAll(/^\s*(career-[a-z]+)\b/gm)) named.add(m[1]);
+
+  const missing = [...named].filter((c) => !skills.has(c)).sort();
+  assert.deepEqual(
+    missing,
+    [],
+    `the README tells users to run commands that do not exist:\n  ${missing.join("\n  ")}`,
+  );
+  assert.ok(named.size >= 5, `expected the README to name the skills, found ${named.size}`);
+});
+
 /* ---------------------------------- the theme docs describe the real output */
 
 test("every class the renderer emits is documented for theme authors", async () => {

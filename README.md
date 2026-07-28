@@ -35,7 +35,7 @@ that reads your Sent folder and submits forms under your name.
 
 | Layer | Where it lives | What is in it |
 |---|---|---|
-| **Plugin** | this repo, public | 7 skills, the node engine, the previewer, the extension, templates |
+| **Plugin** | this repo, public | 8 skills, the node engine, the previewer, the extension, templates |
 | **Workspace** | `$CAREER_HOME`, default `~/career`, private, its own git repo | your profile, rules, voice, knowledge base, CV, job records, drafts, receipts |
 | **Live data** | wherever your existing files already are | untouched. Nothing moves out from under work in flight |
 
@@ -68,7 +68,7 @@ sent. Read a few drafts you actually agree with before you change one line.
 
 ---
 
-## The seven skills
+## The eight skills
 
 | Skill | What it does |
 |---|---|
@@ -79,6 +79,7 @@ sent. Read a few drafts you actually agree with before you change one line.
 | `career-apply` | Drafts the application and puts every irreversible step through the gate |
 | `career-inbox` | Matches replies to a stored `message_id`, classifies reply against auto-ack against rejection, moves the stage |
 | `career-review` | Pipeline digest, what is overdue, a weekly report |
+| `career-serve` | Starts the local previewer on `127.0.0.1`, which edits the knowledge base and never a rendered file |
 
 ---
 
@@ -204,7 +205,7 @@ worked well enough to be worth handing to someone else.
 
 ```
 .claude-plugin/   marketplace.json + plugin.json. This repo is both.
-skills/           7 skills
+skills/           8 skills
 engine/           node ESM, zero dependencies
 previewer/        local web app, served by engine/serve.mjs
 extension/        MV3 Chrome extension, no build step
