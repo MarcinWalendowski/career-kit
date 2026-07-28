@@ -47,6 +47,13 @@ done
 Then fill `profile.yaml` in one short interview: name, email, phone, location, links, work
 authorization per region, relocation, notice period, mail account, CV path.
 
+Then read `rules.yaml: roles.allow` and `roles.deny` with the user and adjust them to their field.
+**The filter matches contiguous phrases on word boundaries**, so `founding engineer` does not match
+"Founding Software Engineer". Add each real-world title variant rather than a keyword and hope: the
+shipped list only works because it carries both the short and the long forms. A title that should
+have passed and did not shows up later as a `role-excluded` block, at the point where the user least
+expects one.
+
 Say why while you ask. Every field in `profile.yaml` is an answer some application form will demand
 later. Answering once, here, is what stops two agents on two different days giving one company
 contradictory answers to "would you relocate". That has happened, to the same job posting, seven

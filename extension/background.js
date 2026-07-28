@@ -16,7 +16,13 @@
  * service worker wakes when you click, and goes back to sleep.
  */
 
-const DEFAULT_PORT = 8899;
+/**
+ * Must match DEFAULT_PORT in engine/serve.mjs. The server owns this number; the
+ * extension only follows it. They disagreed once (7749 there, 8899 here) and the
+ * result was an extension that could never reach the server on a default install,
+ * with no error either side could explain: the POST just failed to connect.
+ */
+const DEFAULT_PORT = 7749;
 
 /** Read settings once per request rather than caching: a token you rotated
  *  should take effect on the next click, not the next browser restart. */
@@ -63,7 +69,11 @@ async function ingest(payload) {
   } catch {
     body = {};
   }
-  return { ok: true, written: body.written ?? payload.jobs.length, skipped: body.skipped ?? 0 };
+  // serve.mjs answers {ok, ingested, ids, dir}. Read `ingested` rather than the
+  // count we sent: the server drops a record it cannot read, and a popup that
+  // reports what it POSTed would claim 23 captures on a run that wrote 21.
+  const written = typeof body.ingested === "number" ? body.ingested : payload.jobs.length;
+  return { ok: true, written, dropped: Math.max(0, payload.jobs.length - written), dir: body.dir || null };
 }
 
 async function health() {

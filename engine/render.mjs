@@ -36,8 +36,9 @@ import {
 } from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { templates } from "./paths.mjs";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { PLUGIN_ROOT, slug, templates } from "./paths.mjs";
 
 /* =========================================================================
  * Typed error
@@ -539,6 +540,7 @@ export function lintHidden(html, css = "") {
 
 const LIST_RE = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
 const HEADING_RE = /^(#{1,6})\s+(.*)$/;
+const LABEL_RE = /^\s*\*\*[^*\n]{1,28}:?\*\*:?\s/;
 
 /**
  * parseMarkdown(text) -> blocks with {type, level, prefix, text, start, end}.
@@ -625,6 +627,11 @@ export function parseMarkdown(text) {
       !LIST_RE.test(lines[i]) && !/^\s*[>|`]/.test(lines[i]) &&
       !/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(lines[i])
     ) {
+      // A bolded label on its own line starts a new block even without a blank
+      // line before it. The knowledge base writes "**Dates:**" and
+      // "**Context:**" as adjacent lines meaning two fields, and folding them
+      // into one paragraph loses the second one.
+      if (i > start && LABEL_RE.test(lines[i])) break;
       parts.push(lines[i].trim());
       i++;
     }
@@ -661,105 +668,418 @@ function attr(s) {
   return escapeHtml(s).replace(/'/g, "&#39;");
 }
 
-/**
- * documentFromMarkdown(kbText) -> { html, anchors, title }
+/* -------------------------------------------------------------------------
+ * Knowledge base to CV
  *
- * Sections come from level-2 headings and carry data-anno-section. Level-3
- * headings open a group carrying data-anno-item. Those two attributes are the
- * whole contract with the previewer's default crumbFor(): the annotation
- * engine never learns a single class name from this renderer.
+ * Two contracts meet here and both have to hold.
+ *
+ * The theme contract (templates/themes/default/README.md) fixes the class
+ * vocabulary a stylesheet may rely on: .page, header, h1, .title, .contact,
+ * .sep, section, h2, .summary, .job, .job-head, .role, .co, .dates, .ctx,
+ * ul, li, .earlier, .edu-item, .skills. A theme that styles all of it must get
+ * a document that emits all of it, or half the stylesheet is dead code.
+ *
+ * The previewer contract fixes data-aid on every editable block, plus
+ * data-anno-section and data-anno-item for breadcrumbs. Those are attributes,
+ * not classes, so the two contracts sit on the same elements without either
+ * one having to know about the other.
+ *
+ * Section meaning is read from headings and from two labels the knowledge base
+ * scaffold already uses, "Dates:" and "Context:". Nothing here guesses which
+ * line is a job title from prose: a section that matches none of the patterns
+ * renders as plain headed prose rather than being forced into a shape.
+ * ---------------------------------------------------------------------- */
+
+const SECTION_KINDS = [
+  ["identity", /identity|contact details/i],
+  ["summary", /summary|positioning|headline|about|profile|who i am/i],
+  ["experience", /experience|current role/i],
+  ["earlier", /prior roles?|earlier|previous roles?/i],
+  ["education", /education|training|degree/i],
+  ["skills", /skills|stack|tooling|technolog/i],
+];
+
+function classify(heading) {
+  const text = heading.replace(/^\d+[.)]\s*/, "");
+  for (const [kind, re] of SECTION_KINDS) if (re.test(text)) return kind;
+  return "other";
+}
+
+/** "4. Experience - Founding Engineer at Acme" -> label, role, company. */
+function splitSectionHeading(raw) {
+  const text = raw.replace(/^\d+[a-z]?[.)]\s*/, "").trim();
+  const dash = text.search(/\s[-:]\s/);
+  if (dash < 0) return { label: text, role: "", company: "" };
+  const label = text.slice(0, dash).trim();
+  const tail = text.slice(dash + 3).trim();
+  const at = tail.search(/\sat\s|,\s/);
+  if (at < 0) return { label, role: tail, company: "" };
+  return { label, role: tail.slice(0, at).trim(), company: tail.slice(at).replace(/^(\sat\s|,\s)/, "").trim() };
+}
+
+/** "**Dates:** 2024 to 2026" -> {label:"dates", value:"2024 to 2026"} */
+function labelledLine(text) {
+  const m = /^\**\s*(dates?|context|location)\s*:?\**\s*:?\s*(.*)$/i.exec(text.trim());
+  if (!m) return null;
+  return { label: m[1].toLowerCase().replace(/s$/, ""), value: m[2].trim() };
+}
+
+function tableFields(src) {
+  const fields = {};
+  for (const line of src.split("\n")) {
+    const cells = line.trim().replace(/^\||\|$/g, "").split("|").map((c) => c.trim());
+    if (cells.length < 2) continue;
+    if (/^:?-{2,}:?$/.test(cells[0])) continue;
+    fields[cells[0].toLowerCase().replace(/[^a-z]/g, "")] = cells[1];
+  }
+  return fields;
+}
+
+/**
+ * documentFromMarkdown(kbText) -> { html, parts, anchors, title, fills }
+ *
+ * `parts` are the shell's slots. `html` is the same content assembled into a
+ * .page, so the previewer pane and the exported artifact are the same document
+ * with the same anchors rather than two renderings that can disagree.
  */
 export function documentFromMarkdown(kbText) {
   const blocks = parseMarkdown(kbText);
   const anchors = [];
-  const out = [];
+  const parts = {
+    name: "", headline: "", contact: "",
+    summary: [], experience: [], earlier: [], education: [], skills: [], other: [],
+  };
   let title = "";
   let sectionIdx = -1;
   let itemIdx = 0;
-  let section = "";
+  let sectionName = "";
   let group = "";
-  let openSection = false;
-  let openGroup = false;
-  let listOpen = false;
+  let kind = "preamble";
+  let fields = {};
+  const preamble = [];
 
-  const closeList = () => {
-    if (listOpen) { out.push("</ul>"); listOpen = false; }
-  };
-  const closeGroup = () => {
-    closeList();
-    if (openGroup) { out.push("</div>"); openGroup = false; }
-    group = "";
-  };
-  const closeSection = () => {
-    closeGroup();
-    if (openSection) { out.push("</section>"); openSection = false; }
-  };
-
-  const anchor = (block, kind) => {
-    const aid = `s${Math.max(sectionIdx, 0)}-${itemIdx++}`;
+  const anchor = (block, aidKind) => {
+    // The header block gets its own prefix. Folding it into section 0 collided
+    // two different knowledge-base lines onto one anchor id, and an anchor id
+    // is what decides which line a write-back overwrites.
+    const aid = `${sectionIdx < 0 ? "h" : "s" + sectionIdx}-${itemIdx++}`;
     anchors.push({
-      aid, kind, section, group,
+      aid, kind: aidKind, section: sectionName, group,
       text: block.text, start: block.start, end: block.end, prefix: block.prefix,
     });
     return aid;
   };
 
+  // Group the flat block list into sections first, so a section can be
+  // rendered knowing what kind it is before its first block is emitted.
+  const sections = [];
+  let current = null;
   for (const b of blocks) {
     if (b.type === "heading" && b.level === 1) {
-      closeSection();
       title = b.text;
-      out.push(`<h1 class="cv-title">${inline(b.text)}</h1>`);
       continue;
     }
     if (b.type === "heading" && b.level === 2) {
-      closeSection();
-      sectionIdx++;
-      itemIdx = 0;
-      section = b.text.replace(/^\d+[.)]\s*/, "");
-      out.push(`<section class="cv-section" data-anno-section="${attr(section)}">`);
-      out.push(`<h2 class="cv-eyebrow">${inline(section)}</h2>`);
-      openSection = true;
+      current = { heading: b.text, blocks: [] };
+      sections.push(current);
       continue;
     }
-    if (b.type === "heading" && b.level >= 3) {
-      closeGroup();
-      group = b.text;
-      out.push(`<div class="cv-group" data-anno-item="${attr(group)}">`);
-      openGroup = true;
-      const aid = anchor(b, "heading");
-      out.push(`<h3 class="cv-subhead" data-aid="${aid}">${inline(b.text)}</h3>`);
-      continue;
-    }
-    if (b.type === "hr") { closeList(); out.push("<hr>"); continue; }
-    if (b.type === "code") {
-      closeList();
-      out.push(`<pre class="cv-code"><code>${escapeHtml(b.text)}</code></pre>`);
-      continue;
-    }
-    if (b.type === "table") {
-      closeList();
-      out.push(renderTable(b.text));
-      continue;
-    }
-    if (b.type === "quote") {
-      closeList();
-      const aid = anchor(b, "quote");
-      out.push(`<blockquote class="cv-quote" data-aid="${aid}">${inline(b.text)}</blockquote>`);
-      continue;
-    }
-    if (b.type === "item") {
-      if (!listOpen) { out.push('<ul class="cv-list">'); listOpen = true; }
-      const aid = anchor(b, "item");
-      out.push(`<li data-aid="${aid}">${inline(b.text)}</li>`);
-      continue;
-    }
-    closeList();
-    const aid = anchor(b, "para");
-    out.push(`<p data-aid="${aid}">${inline(b.text)}</p>`);
+    if (!current) preamble.push(b);
+    else current.blocks.push(b);
   }
-  closeSection();
 
-  return { html: out.join("\n"), anchors, title };
+  // Preamble: the lines under the title, before any section.
+  sectionIdx = -1;
+  for (const b of preamble) {
+    if (b.type !== "para" && b.type !== "quote") continue;
+    const aid = anchor(b, b.type);
+    if (!parts.headline) parts.headline = `<span data-aid="${aid}">${inline(b.text)}</span>`;
+    else if (!parts.contact) parts.contact = contactLine(b.text, aid);
+  }
+
+  sections.forEach((sec, index) => {
+    sectionIdx = index;
+    itemIdx = 0;
+    group = "";
+    const { label, role, company } = splitSectionHeading(sec.heading);
+    sectionName = label;
+    kind = classify(sec.heading);
+    const body = [];
+    let listOpen = false;
+    let groupOpen = false;
+    const closeList = () => {
+      if (listOpen) { body.push("</ul>"); listOpen = false; }
+    };
+    const closeGroup = () => {
+      closeList();
+      if (groupOpen) { body.push("</div>"); groupOpen = false; }
+    };
+
+    let dates = "";
+    let ctx = "";
+
+    for (const b of sec.blocks) {
+      if (b.type === "table") {
+        closeList();
+        if (kind === "identity") Object.assign(fields, tableFields(b.text));
+        else body.push(renderTable(b.text));
+        continue;
+      }
+      if (b.type === "hr") continue;
+      if (b.type === "code") {
+        closeList();
+        body.push(`<pre class="code"><code>${escapeHtml(b.text)}</code></pre>`);
+        continue;
+      }
+      if (b.type === "heading") {
+        closeGroup();
+        group = b.heading || b.text;
+        const aid = anchor(b, "heading");
+        if (kind === "education") {
+          body.push(`<div class="edu-item" data-anno-item="${attr(b.text)}" data-aid="${aid}">${inline(b.text)}`);
+          groupOpen = true;
+          continue;
+        }
+        body.push(`<div class="group" data-anno-item="${attr(b.text)}">`);
+        body.push(`<h3 data-aid="${aid}">${inline(b.text)}</h3>`);
+        groupOpen = true;
+        continue;
+      }
+      if (b.type === "item") {
+        if (kind === "skills") {
+          const aid = anchor(b, "item");
+          body.push(`<p data-aid="${aid}">${inline(b.text)}</p>`);
+          continue;
+        }
+        if (kind === "earlier") {
+          const aid = anchor(b, "item");
+          body.push(`<div class="job earlier" data-aid="${aid}">${inline(b.text)}</div>`);
+          continue;
+        }
+        if (kind === "education") {
+          const aid = anchor(b, "item");
+          body.push(`<div class="edu-item" data-aid="${aid}">${inline(b.text)}</div>`);
+          continue;
+        }
+        if (!listOpen) { body.push("<ul>"); listOpen = true; }
+        const aid = anchor(b, "item");
+        body.push(`<li data-aid="${aid}">${inline(b.text)}</li>`);
+        continue;
+      }
+
+      closeList();
+      const labelled = labelledLine(b.text);
+      if (labelled && kind === "experience" && labelled.label === "date" && !dates) {
+        dates = `<div class="dates" data-aid="${anchor(b, "para")}">${inline(labelled.value)}</div>`;
+        continue;
+      }
+      if (labelled && kind === "experience" && labelled.label === "context" && !ctx) {
+        ctx = `<div class="ctx" data-aid="${anchor(b, "para")}">${inline(labelled.value)}</div>`;
+        continue;
+      }
+      const aid = anchor(b, b.type === "quote" ? "quote" : "para");
+      if (kind === "education" && groupOpen) {
+        body.push(`<div class="sub" data-aid="${aid}">${inline(b.text)}</div>`);
+        continue;
+      }
+      if (kind === "earlier") {
+        body.push(`<div class="job earlier" data-aid="${aid}">${inline(b.text)}</div>`);
+        continue;
+      }
+      body.push(`<p data-aid="${aid}">${inline(b.text)}</p>`);
+    }
+    closeGroup();
+
+    const inner = body.join("\n");
+    if (kind === "identity") {
+      parts.name = parts.name || fields.name || "";
+      if (!parts.headline && fields.currenttitle) parts.headline = inline(fields.currenttitle);
+      parts.contact = parts.contact || contactFromFields(fields);
+      return;
+    }
+    if (kind === "summary") {
+      if (!parts.headline && sec.blocks.length) parts.headline = parts.headline || "";
+      parts.summary.push(inner);
+      return;
+    }
+    if (kind === "experience") {
+      const head = role
+        ? `<div class="job-head"><div class="role">${inline(role)}${company ? ` <span class="co">${inline(company)}</span>` : ""}</div>${dates}</div>`
+        : dates
+          ? `<div class="job-head">${dates}</div>`
+          : "";
+      parts.experience.push(
+        `<div class="job" data-anno-section="${attr(label)}">\n${head}\n${ctx}\n${inner}\n</div>`,
+      );
+      return;
+    }
+    if (kind === "earlier") { parts.earlier.push(inner); return; }
+    if (kind === "education") { parts.education.push(inner); return; }
+    if (kind === "skills") { parts.skills.push(inner); return; }
+    parts.other.push(`<section data-anno-section="${attr(label)}"><h2>${inline(label)}</h2>\n${inner}\n</section>`);
+  });
+
+  parts.name = parts.name || title || "";
+  const fills = (kbText.match(/\[\[FILL/g) || []).length;
+
+  return {
+    html: assemblePage(parts),
+    parts,
+    anchors,
+    title: parts.name || title,
+    fills,
+  };
+}
+
+/**
+ * Emphasis puts named sections first and drops the ones that are not CV
+ * content. It reorders and it trims; it never rewrites a line and never adds
+ * one, so a tailored CV still says only what the knowledge base says.
+ */
+function applyEmphasis(doc, emphasis) {
+  const wanted = emphasis.map((e) => slug(e));
+  const rank = (html) => {
+    const m = /data-anno-section="([^"]*)"/.exec(html);
+    const idx = m ? wanted.indexOf(slug(m[1])) : -1;
+    return idx < 0 ? wanted.length : idx;
+  };
+  doc.parts.experience = doc.parts.experience
+    .map((html, i) => ({ html, i, r: rank(html) }))
+    .sort((a, b) => a.r - b.r || a.i - b.i)
+    .map((x) => x.html);
+  doc.parts.other = [];
+  doc.html = assemblePage(doc.parts);
+}
+
+/** Contact items separated by the glyph the theme styles as .sep. */
+function contactLine(text, aid) {
+  const items = text.split(/\s*[·|]\s*/).filter(Boolean);
+  const joined = items.map((i) => inline(i)).join(' <span class="sep">·</span> ');
+  return aid ? `<span data-aid="${aid}">${joined}</span>` : joined;
+}
+
+function contactFromFields(fields) {
+  const order = ["email", "phone", "location", "linkedin", "github", "portfoliosite", "site"];
+  const items = order.map((k) => fields[k]).filter(Boolean);
+  return items.length ? items.map((i) => inline(i)).join(' <span class="sep">·</span> ') : "";
+}
+
+const SLOT_SECTIONS = [
+  ["summary", "Summary", "summary"],
+  ["experience", "Experience", ""],
+  ["earlier", "Earlier", ""],
+  ["education", "Education", ""],
+  ["skills", "Skills", "skills"],
+];
+
+/** The same content the shell gets, assembled into a standalone .page. */
+function assemblePage(parts) {
+  const out = ['<div class="page">'];
+  out.push("<header data-anno-section=\"Identity\">");
+  if (parts.name) out.push(`<h1>${inline(parts.name)}</h1>`);
+  if (parts.headline) out.push(`<div class="title">${parts.headline}</div>`);
+  if (parts.contact) out.push(`<div class="contact">${parts.contact}</div>`);
+  out.push("</header>");
+  for (const [key, heading, cls] of SLOT_SECTIONS) {
+    const body = parts[key].join("\n");
+    if (!body.trim()) continue;
+    out.push(`<section${cls ? ` class="${cls}"` : ""} data-anno-section="${attr(heading)}">`);
+    out.push(`<h2>${heading}</h2>`);
+    out.push(body);
+    out.push("</section>");
+  }
+  out.push(parts.other.join("\n"));
+  out.push("</div>");
+  return out.filter(Boolean).join("\n");
+}
+
+/**
+ * Fill a theme's cv.html. Slots are {{name}}; an unknown slot resolves to an
+ * empty string rather than being left on the page, because "{{footer}}" in an
+ * exported CV is worse than no footer.
+ */
+export function fillShell(shell, slots) {
+  return String(shell).replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, key) => {
+    const value = slots[key.toLowerCase()];
+    return value === undefined || value === null ? "" : String(value);
+  });
+}
+
+/**
+ * Remove every node carrying an attribute, before the lint sees the document.
+ *
+ * This is the supported alternative to hiding: data-screen-only comes out of
+ * the print and PDF targets, data-print-only comes out of the screen target,
+ * and in both cases the text is absent from the file rather than present and
+ * invisible. A reader who opens the file sees what a human sees.
+ */
+export function removeNodesWithAttr(html, attrName) {
+  const src = String(html);
+  const open = new RegExp(`<([a-z][\\w-]*)([^>]*\\s${attrName}(?:\\s*=\\s*(?:"[^"]*"|'[^']*'|[^\\s>]*))?)([^>]*)>`, "i");
+  let out = src;
+  for (let guard = 0; guard < 200; guard++) {
+    const m = open.exec(out);
+    if (!m) break;
+    const tag = m[1].toLowerCase();
+    const start = m.index;
+    if (VOID_TAGS.has(tag)) {
+      out = out.slice(0, start) + out.slice(start + m[0].length);
+      continue;
+    }
+    let depth = 1;
+    let i = start + m[0].length;
+    const scan = new RegExp(`<(/?)${tag}\\b[^>]*>`, "gi");
+    scan.lastIndex = i;
+    let hit;
+    let end = out.length;
+    while ((hit = scan.exec(out))) {
+      depth += hit[1] ? -1 : 1;
+      if (depth === 0) {
+        end = hit.index + hit[0].length;
+        break;
+      }
+    }
+    out = out.slice(0, start) + out.slice(end);
+  }
+  return out;
+}
+
+/**
+ * Prefix every selector in a stylesheet, so a theme can be shown inside the
+ * previewer without its `html, body` and bare `li` rules reaching the app
+ * around it. Only the previewer needs this; an exported artifact gets the
+ * stylesheet untouched.
+ */
+export function scopeCss(css, prefix) {
+  const rules = parseCssRules(css);
+  const byAt = new Map();
+  for (const rule of rules) {
+    const key = rule.at.join("|");
+    if (!byAt.has(key)) byAt.set(key, { at: rule.at, rules: [] });
+    byAt.get(key).rules.push(rule);
+  }
+  const out = [];
+  for (const { at, rules: group } of byAt.values()) {
+    if (at.some((a) => /print/i.test(a))) continue;
+    const body = group
+      .map((rule) => {
+        const selector = rule.selector
+          .split(",")
+          .map((part) => {
+            const s = part.trim();
+            if (!s) return "";
+            if (/^(html|body|:root)\b/i.test(s)) return `${prefix}${s.replace(/^(html|body|:root)/i, "")}`.trim() || prefix;
+            return `${prefix} ${s}`;
+          })
+          .filter(Boolean)
+          .join(", ");
+        const decls = Object.entries(rule.decls).map(([k, v]) => `${k}:${v}`).join(";");
+        return `${selector}{${decls}}`;
+      })
+      .join("\n");
+    out.push(at.length ? `${at.join(" ")}{${body}}` : body);
+  }
+  return out.join("\n");
 }
 
 function renderTable(src) {
@@ -850,6 +1170,46 @@ export function themeCss(theme = "default", home = null) {
     }
   }
   return "";
+}
+
+/**
+ * A theme may ship its own HTML shell. Missing, it falls back to the default
+ * theme's shell, and only if that is missing too does the renderer emit its
+ * own plain document. The last case exists so the engine still works in a
+ * checkout with no templates directory.
+ */
+export function themeShell(theme = "default", home = null) {
+  const name = String(theme).replace(/[^\w.-]/g, "");
+  const candidates = [];
+  if (home) candidates.push(join(home, "cv", "themes", name, "cv.html"));
+  candidates.push(templates(join("themes", name, "cv.html")));
+  candidates.push(templates(join("themes", "default", "cv.html")));
+  for (const file of candidates) {
+    if (!existsSync(file)) continue;
+    try {
+      return readFileSync(file, "utf8");
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+/** Pull the .page element out of a rendered document, for the preview pane. */
+export function extractPage(html) {
+  const src = String(html);
+  const open = /<div\b[^>]*class\s*=\s*["'][^"']*\bpage\b[^"']*["'][^>]*>/i.exec(src);
+  if (!open) return null;
+  const start = open.index;
+  let depth = 1;
+  const scan = /<(\/?)div\b[^>]*>/gi;
+  scan.lastIndex = start + open[0].length;
+  let hit;
+  while ((hit = scan.exec(src))) {
+    depth += hit[1] ? -1 : 1;
+    if (depth === 0) return src.slice(start, hit.index + hit[0].length);
+  }
+  return src.slice(start);
 }
 
 /* =========================================================================
@@ -990,8 +1350,33 @@ export function render(kbText, opts = {}) {
   const target = opts.target || "html";
   const theme = opts.theme || "default";
   const doc = documentFromMarkdown(kbText);
-  const css = BASE_CSS + "\n" + (opts.themeCss !== undefined ? opts.themeCss : themeCss(theme, opts.home));
-  const html = fullDocument({ title: doc.title, body: doc.html, css });
+  if (opts.emphasis && opts.emphasis.length) applyEmphasis(doc, opts.emphasis);
+  const themed = opts.themeCss !== undefined ? opts.themeCss : themeCss(theme, opts.home);
+  const shell = opts.shell !== undefined ? opts.shell : themeShell(theme, opts.home);
+  const css = shell && themed ? themed : BASE_CSS + "\n" + (themed || "");
+
+  let html = shell
+    ? fillShell(shell, {
+        lang: opts.lang || "en",
+        doc_title: doc.title || "CV",
+        theme_css: css,
+        name: inline(doc.parts.name),
+        headline: doc.parts.headline,
+        contact_line: doc.parts.contact,
+        summary: doc.parts.summary.join("\n"),
+        experience: doc.parts.experience.join("\n"),
+        earlier: doc.parts.earlier.join("\n"),
+        education: doc.parts.education.join("\n"),
+        skills: doc.parts.skills.join("\n"),
+        footer: opts.footer || "",
+      })
+    : fullDocument({ title: doc.title, body: doc.html, css });
+
+  // The node removal happens before the lint, not after, so that what the lint
+  // reads is exactly the bytes the artifact will contain.
+  html = target === "html"
+    ? removeNodesWithAttr(html, "data-print-only")
+    : removeNodesWithAttr(html, "data-screen-only");
 
   const lint = lintHidden(html, css);
   if (!lint.ok) throw new HiddenTextError(lint.findings);
@@ -999,6 +1384,8 @@ export function render(kbText, opts = {}) {
   const result = {
     target, theme, title: doc.title,
     html, css, anchors: doc.anchors,
+    page: extractPage(html) || doc.html,
+    fills: doc.fills,
     md: null, pdfPath: null, warnings: [],
   };
 
@@ -1109,4 +1496,299 @@ ${css}
   return { checked: true, fits: height <= FIT_MAX_HEIGHT, height, limit: FIT_MAX_HEIGHT, width: FIT_WIDTH };
 }
 
-export default { render, lintHidden, fitsOnePage, HiddenTextError };
+/* =========================================================================
+ * The brief
+ *
+ * outputs/brief.md replaces a 214 line prose contract that hardcoded one
+ * person. The structure is a template shipped with the career-apply skill; all
+ * of the content comes from the workspace, so a user who edits voice.md sees
+ * the brief change on the next render.
+ *
+ * An unresolved placeholder renders as a [[FILL]] marker naming the file that
+ * was supposed to supply it. It never renders as an empty string, because a
+ * brief with a silent hole reads as a complete brief.
+ * ====================================================================== */
+
+const SOURCE_FILES = {
+  profile: "profile.yaml",
+  rules: "rules.yaml",
+  voice: "voice.md",
+  kb: "knowledge-base.md",
+};
+
+function lookup(ctx, path) {
+  const parts = String(path).trim().split(".");
+  let node = ctx;
+  for (const part of parts) {
+    if (node === null || node === undefined || typeof node !== "object") return undefined;
+    node = node[part];
+  }
+  return node;
+}
+
+function fillMarker(path) {
+  const root = String(path).split(".")[0];
+  const file = SOURCE_FILES[root] || "the workspace";
+  return `[[FILL]] ${path} is missing from ${file}`;
+}
+
+/** The body under a heading in a markdown file, as markdown. */
+export function sectionBody(mdText, heading) {
+  const blocks = parseMarkdown(mdText || "");
+  const want = String(heading).trim().toLowerCase();
+  let collecting = false;
+  let level = 0;
+  const out = [];
+  for (const b of blocks) {
+    if (b.type === "heading") {
+      const label = b.text.replace(/^\d+[a-z]?[.)]\s*/, "").trim().toLowerCase();
+      if (collecting && b.level <= level) break;
+      if (!collecting && (label === want || label.startsWith(want))) {
+        collecting = true;
+        level = b.level;
+        continue;
+      }
+    }
+    if (!collecting) continue;
+    if (b.type === "heading") out.push("#".repeat(b.level) + " " + b.text);
+    else if (b.type === "item") out.push(b.prefix + b.text);
+    else if (b.type === "quote") out.push("> " + b.text);
+    else if (b.type === "table" || b.type === "code") out.push(b.text);
+    else out.push(b.text);
+  }
+  return out.join("\n").trim();
+}
+
+function findBlock(tpl, from) {
+  const open = /\{\{#(each|if|unless)\s+([^}]+?)\s*\}\}/g;
+  open.lastIndex = from;
+  const m = open.exec(tpl);
+  if (!m) return null;
+  const kind = m[1];
+  const path = m[2];
+  const bodyStart = m.index + m[0].length;
+  const scan = new RegExp(`\\{\\{#${kind}\\s+[^}]+?\\s*\\}\\}|\\{\\{/${kind}\\}\\}`, "g");
+  scan.lastIndex = bodyStart;
+  let depth = 1;
+  let hit;
+  while ((hit = scan.exec(tpl))) {
+    depth += hit[0].startsWith("{{/") ? -1 : 1;
+    if (depth === 0) {
+      return { kind, path, start: m.index, bodyStart, bodyEnd: hit.index, end: hit.index + hit[0].length };
+    }
+  }
+  return null;
+}
+
+/** A small block-and-placeholder template renderer. No dependency, no eval. */
+export function renderTemplate(tpl, ctx) {
+  let out = String(tpl).replace(/^\s*<!--[\s\S]*?-->\s*/, "");
+  for (let guard = 0; guard < 500; guard++) {
+    const block = findBlock(out, 0);
+    if (!block) break;
+    const body = out.slice(block.bodyStart, block.bodyEnd);
+    const value = lookup(ctx, block.path);
+    let replacement = "";
+    if (block.kind === "each") {
+      const list = Array.isArray(value) ? value : [];
+      replacement = list
+        .map((item) => renderTemplate(body, { ...ctx, ".": item, __item: item }))
+        .join("");
+    } else if (block.kind === "if") {
+      replacement = truthy(value) ? renderTemplate(body, ctx) : "";
+    } else {
+      replacement = truthy(value) ? "" : renderTemplate(body, ctx);
+    }
+    out = out.slice(0, block.start) + replacement + out.slice(block.end);
+  }
+
+  return out.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (_, raw) => {
+    const key = raw.trim();
+    if (key === ".") {
+      const item = ctx["."];
+      return item === undefined ? "" : String(item);
+    }
+    const named = /^(voice|kb):(.+)$/.exec(key);
+    if (named) {
+      const text = named[1] === "voice" ? ctx.__voice : ctx.__kb;
+      const body = sectionBody(text, named[2]);
+      return body || `[[FILL]] the "${named[2].trim()}" section is missing from ${SOURCE_FILES[named[1]]}`;
+    }
+    const item = ctx["."];
+    if (item && typeof item === "object" && key in item) {
+      const v = item[key];
+      return v === undefined || v === null ? "" : String(v);
+    }
+    const value = lookup(ctx, key);
+    if (value === undefined || value === null || value === "") return fillMarker(key);
+    if (Array.isArray(value)) return value.join(", ");
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  });
+}
+
+function truthy(v) {
+  if (Array.isArray(v)) return v.length > 0;
+  if (v && typeof v === "object") return Object.keys(v).length > 0;
+  return Boolean(v);
+}
+
+/**
+ * Read the workspace YAML through validate.mjs rather than parsing it here.
+ *
+ * The import is dynamic and guarded: a second YAML parser in this file would
+ * be a second answer to the same question, which is the duplication this whole
+ * product exists to remove. If validate.mjs cannot be loaded the brief renders
+ * with [[FILL]] markers naming the file, which is honest, rather than with a
+ * best guess.
+ */
+async function readWorkspaceYaml(file) {
+  if (!existsSync(file)) return null;
+  try {
+    const { parseYaml } = await import("./validate.mjs");
+    return parseYaml(readFileSync(file, "utf8"), { name: file });
+  } catch {
+    return null;
+  }
+}
+
+export async function renderBrief(P, opts = {}) {
+  const templatePath = opts.template ||
+    join(PLUGIN_ROOT, "skills", "career-apply", "references", "brief-template.md");
+  if (!existsSync(templatePath)) {
+    throw Object.assign(new Error(`brief template not found at ${templatePath}`), { code: "NO_TEMPLATE" });
+  }
+  const profile = await readWorkspaceYaml(P.profile);
+  const rules = await readWorkspaceYaml(P.rules);
+  const mode = (rules && rules.mode) || "";
+  const ctx = {
+    profile: profile || {},
+    rules: rules || {},
+    now: new Date().toISOString(),
+    careerHome: P.home,
+    modeIsDraft: mode === "draft",
+    modeIsReview: mode === "review",
+    modeIsAutopilot: mode === "autopilot",
+    __voice: existsSync(P.voice) ? readFileSync(P.voice, "utf8") : "",
+    __kb: existsSync(P.kb) ? readFileSync(P.kb, "utf8") : "",
+  };
+  const text = renderTemplate(readFileSync(templatePath, "utf8"), ctx);
+  return { text, fills: (text.match(/\[\[FILL/g) || []).length };
+}
+
+/* =========================================================================
+ * CLI
+ *
+ * Four skills invoke this file as a command. A module that is only a library
+ * exits 0 and writes nothing when it is run, which is indistinguishable from
+ * success, so the command surface is part of the module.
+ * ====================================================================== */
+
+function parseArgv(argv) {
+  const out = { target: "html" };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    const take = () => argv[++i];
+    if (a === "--target") out.target = take();
+    else if (a === "--theme") out.theme = take();
+    else if (a === "--emphasis") out.emphasis = String(take() || "").split(/[,\s]+/).filter(Boolean);
+    else if (a === "--out") out.out = take();
+    else if (a === "--home") out.home = take();
+    else if (a === "--help" || a === "-h") out.help = true;
+    else if (a.startsWith("--")) out.unknown = a;
+  }
+  return out;
+}
+
+const USAGE = `career-kit render
+
+  node engine/render.mjs --target html|md|pdf|brief [options]
+
+  --target html    outputs/cv.html
+  --target md      outputs/cv.md
+  --target pdf     outputs/cv.pdf, needs Chrome or CHROME_PATH
+  --target brief   outputs/brief.md, compiled from profile, rules, voice and the knowledge base
+  --theme <name>   theme directory name, default: the name in cv/theme, else "default"
+  --emphasis a,b   put the named sections first. It reorders and drops non-CV sections.
+                   It never adds a claim and never rewrites a line.
+  --out <path>     write somewhere other than the default
+  --home <dir>     workspace, default $CAREER_HOME
+
+Exit codes: 0 written, 2 usage, 3 refused by the hidden-text lint (the HTTP 422 case).
+`;
+
+async function main(argv) {
+  const args = parseArgv(argv);
+  if (args.help) {
+    process.stdout.write(USAGE);
+    return 0;
+  }
+  if (!["html", "md", "pdf", "brief"].includes(args.target)) {
+    process.stderr.write(`unknown --target ${args.target}\n\n${USAGE}`);
+    return 2;
+  }
+  if (args.unknown) {
+    process.stderr.write(`unknown option ${args.unknown}\n\n${USAGE}`);
+    return 2;
+  }
+
+  const { ensureRuntimeDirs, findCareerHome, paths } = await import("./paths.mjs");
+  const P = ensureRuntimeDirs(paths(args.home ? resolve(args.home) : findCareerHome()));
+
+  if (args.target === "brief") {
+    const out = args.out || P.brief;
+    const brief = await renderBrief(P);
+    writeFileSync(out, brief.text, "utf8");
+    process.stdout.write(JSON.stringify({ ok: true, target: "brief", path: out, fills: brief.fills }) + "\n");
+    if (brief.fills) {
+      process.stderr.write(`${brief.fills} unresolved placeholder(s) in the brief. Each one names the file that supplies it.\n`);
+    }
+    return 0;
+  }
+
+  const theme = args.theme || (existsSync(P.cvTheme) ? readFileSync(P.cvTheme, "utf8").trim() : "") || "default";
+  const kb = existsSync(P.kb) ? readFileSync(P.kb, "utf8") : "";
+  if (!kb.trim()) {
+    process.stderr.write(`knowledge base is empty at ${P.kb}. Run career-setup or career-kb first.\n`);
+    return 2;
+  }
+
+  const defaults = { html: "cv.html", md: "cv.md", pdf: "cv.pdf" };
+  const out = args.out || join(P.outputs, defaults[args.target]);
+
+  try {
+    const result = render(kb, {
+      theme, target: args.target, home: P.home, emphasis: args.emphasis,
+      outDir: P.outputs, out: args.target === "pdf" ? out : undefined,
+    });
+    if (args.target === "md") writeFileSync(out, result.md, "utf8");
+    else if (args.target === "html") writeFileSync(out, result.html, "utf8");
+    process.stdout.write(JSON.stringify({
+      ok: true, target: args.target, theme,
+      path: args.target === "pdf" ? result.pdfPath : out,
+      fills: result.fills, anchors: result.anchors.length, warnings: result.warnings,
+    }) + "\n");
+    for (const w of result.warnings) process.stderr.write(w + "\n");
+    if (result.fills) {
+      process.stderr.write(`${result.fills} [[FILL]] marker(s) are still in the knowledge base. They render as written; fill them before sending.\n`);
+    }
+    return 0;
+  } catch (e) {
+    if (!(e instanceof HiddenTextError)) throw e;
+    process.stdout.write(JSON.stringify({
+      ok: false, status: 422, error: "hidden-text", findings: e.findings,
+    }) + "\n");
+    process.stderr.write(
+      "Refused: the document would contain text a human reader cannot see.\n" +
+        e.findings.map((f) => `  ${f.selector} sets ${f.rule} in ${f.where}. ${f.why}`).join("\n") +
+        "\nMake it visible or delete it. This check has no override.\n",
+    );
+    return 3;
+  }
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  process.exitCode = await main(process.argv.slice(2));
+}
+
+export default { render, lintHidden, fitsOnePage, renderBrief, HiddenTextError };

@@ -229,12 +229,16 @@ body.ck-dragging { cursor: col-resize; user-select: none; }
   padding: 20px;
   background: var(--bg);
 }
-#cv-host { margin: 0 auto; max-width: 763px; }
-#cv-host .cv-doc {
+#cv-host { margin: 0 auto; max-width: 860px; }
+/* The sheet. The theme owns everything inside it; these three lines only make
+   it read as a page sitting on the app's background. */
+#cv-host .page {
   background: #fff;
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
+/* The theme's screen-only hint bar is left visible on purpose. Hiding it here
+   would be the previewer doing the exact thing its renderer refuses to do. */
 
 /* --------------------------------------------------------------- rail */
 

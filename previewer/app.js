@@ -151,9 +151,9 @@
         return;
       }
       el.cvStyle.textContent = r.data.css || "";
-      el.cvTheme.textContent = "theme: " + (r.data.theme || "default");
-      var body = /<article[\s\S]*<\/article>/i.exec(r.data.html);
-      el.cvHost.innerHTML = body ? body[0] : r.data.html;
+      el.cvTheme.textContent = "theme: " + (r.data.theme || "default") +
+        (r.data.fills ? " · " + r.data.fills + " unfilled marker" + (r.data.fills === 1 ? "" : "s") : "");
+      el.cvHost.innerHTML = r.data.html || "";
 
       state.baselineSource = {};
       state.anchorSource = {};

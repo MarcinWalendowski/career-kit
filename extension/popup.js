@@ -10,6 +10,10 @@
  * credential for any job board, and it never reaches the page.
  */
 
+/** Must match DEFAULT_PORT in engine/serve.mjs and background.js. One constant,
+ *  read three times below, so the next change cannot land in two of the three. */
+const DEFAULT_PORT = 7749;
+
 const $ = (id) => document.getElementById(id);
 const els = {
   token: $("token"),
@@ -73,7 +77,7 @@ function persist() {
   saveTimer = setTimeout(() => {
     chrome.storage.local.set({
       token: els.token.value.trim(),
-      port: Number(els.port.value) || 8899,
+      port: Number(els.port.value) || DEFAULT_PORT,
     });
   }, 200);
 }
@@ -85,7 +89,7 @@ els.port.addEventListener("input", persist);
 els.capture.addEventListener("click", async () => {
   await chrome.storage.local.set({
     token: els.token.value.trim(),
-    port: Number(els.port.value) || 8899,
+    port: Number(els.port.value) || DEFAULT_PORT,
   });
 
   const tab = await activeTab();
@@ -107,7 +111,7 @@ els.capture.addEventListener("click", async () => {
 });
 
 els.check.addEventListener("click", async () => {
-  await chrome.storage.local.set({ token: els.token.value.trim(), port: Number(els.port.value) || 8899 });
+  await chrome.storage.local.set({ token: els.token.value.trim(), port: Number(els.port.value) || DEFAULT_PORT });
   say("Checking.");
   const res = await chrome.runtime.sendMessage({ type: "career-kit/health" });
   if (res && res.ok) {
@@ -124,8 +128,11 @@ chrome.runtime.onMessage.addListener((msg) => {
 function render(r) {
   if (!r) return;
   if (r.ok) {
+    // `written` is the server's own count, not ours. `dropped` is the gap
+    // between what we POSTed and what it wrote, which is the only way a record
+    // the server rejected as unreadable becomes visible to the user at all.
     const parts = [`Wrote ${r.written} to jobs/inbox/`];
-    if (r.skipped) parts.push(`${r.skipped} already known`);
+    if (r.dropped) parts.push(`${r.dropped} rejected by the server`);
     if (r.failed) parts.push(`${r.failed} cards could not be parsed`);
     return say(`${parts.join(". ")}.`, "ok");
   }

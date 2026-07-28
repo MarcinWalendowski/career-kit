@@ -33,12 +33,18 @@ node "$CLAUDE_PLUGIN_ROOT/engine/gate.mjs" check \
   --id "$ID" --channel "$CHANNEL" \
   --sent-check "$COUNT" \
   --sent-check-query "in:anywhere to:$DOMAIN" \
-  --identity-domain "$DOMAIN"; echo "exit=$?"
+  --identity-domain "$DOMAIN" \
+  --draft "$CAREER_HOME/drafts/$ID/message.md"; echo "exit=$?"
 ```
 
 `--sent-check` is required, and omitting it blocks with `sent-check-missing` rather than passing. An
 unknown count is a block, not a pass. **Never pass a number you did not measure**, and never pass
 `0` because a search errored. If the mailbox is unreachable, that is a stop.
+
+`--draft` is how `content.banned_characters` and `banned_phrases` get enforced. **Without it the
+content rules do not run at all** and `banned-content` can never fire. Pass the draft whenever one
+exists on disk, which after `career-tailor` it does. If you are checking before a draft exists,
+check again with `--draft` once it does, and before you claim.
 
 ## 2. Claim, immediately before acting
 

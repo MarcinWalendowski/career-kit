@@ -352,8 +352,10 @@ describe("binding", () => {
         req.end();
       });
       assert.equal(r.status, 401);
+      assert.equal(readFileSync(join(home, ".previewer-token"), "utf8").trim(), second.token);
     } finally {
       await second.close();
+      writeFileSync(join(home, ".previewer-token"), server.token + "\n", { mode: 0o600 });
     }
   });
 });

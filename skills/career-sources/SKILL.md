@@ -32,6 +32,10 @@ which one you checked. Never let "the adapter returned zero" become "they are no
 Read `rules.yaml: roles.allow` and `roles.deny`. A denied title is dropped here, at the cheapest
 point, and the reason goes in the record.
 
+The match is on contiguous phrases with word boundaries, so `founding engineer` does not match
+"Founding Software Engineer". A title that plainly belongs and does not match is a missing variant
+in `roles.allow`, not a target to drop. Say so rather than silently skipping the company.
+
 Two failure modes worth naming:
 
 - **Do not fall back to an excluded req.** When a company posts one allowed role and three denied

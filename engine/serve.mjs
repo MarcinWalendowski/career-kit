@@ -39,7 +39,7 @@ import {
 import { extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PLUGIN_ROOT, ensureRuntimeDirs, findCareerHome, paths, slug } from "./paths.mjs";
-import { HiddenTextError, applyAnchorEdit, parseMarkdown, render } from "./render.mjs";
+import { HiddenTextError, applyAnchorEdit, parseMarkdown, render, scopeCss } from "./render.mjs";
 
 const DEFAULT_PORT = 7749;
 const PORT_TRIES = 20;
@@ -313,9 +313,12 @@ export async function startServer(options = {}) {
       const theme = (readTextFile(P.cvTheme).trim() || url.searchParams.get("theme") || "default").trim();
       try {
         const out = render(text, { theme, target: "html", home: P.home });
+        // The pane gets the .page element and a scoped copy of the theme CSS.
+        // A theme styles html, body, h1, ul and li, so injected unscoped it
+        // would restyle the previewer around it.
         return send(res, 200, {
-          html: out.html, css: out.css, anchors: out.anchors,
-          title: out.title, theme, etag: etagOf(text),
+          html: out.page, css: scopeCss(out.css, "#cv-host"), anchors: out.anchors,
+          title: out.title, theme, fills: out.fills, etag: etagOf(text),
         });
       } catch (e) {
         if (e instanceof HiddenTextError) return send(res, 422, hiddenTextPayload(e));

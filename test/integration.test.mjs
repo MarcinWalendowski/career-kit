@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, cpSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, readdirSync, existsSync, rmSync, cpSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -185,6 +185,94 @@ test("a workspace provisions from shipped templates alone", () => {
   assert.equal(r.json.careerHome, home);
   assert.equal(r.json.quota.used, 0);
   rmSync(home, { recursive: true, force: true });
+});
+
+/* ------------------------------------------- the skills call a real engine */
+
+test("every engine command a skill emits actually exists", () => {
+  // The generic guard for a class of bug, not one instance of it. render.mjs was
+  // once a library with no CLI at all while four skills invoked it as a command
+  // six times. Node imported the module, defined some functions and exited 0, so
+  // every one of those calls looked like a success and wrote nothing. engine/
+  // inbox.mjs did not exist at all while career-inbox called it.
+  //
+  // Both are the same failure: a skill and a module that were written separately
+  // and never run against each other. Asserting the file exists and the verb is
+  // recognised is cheap and catches it at the seam.
+  const skills = readdirSync(join(KIT, "skills"));
+  const seen = new Set();
+  const missing = [];
+
+  for (const skill of skills) {
+    for (const file of ["SKILL.md", "references"]) {
+      const base = join(KIT, "skills", skill, file);
+      const docs = file === "SKILL.md"
+        ? [base]
+        : (existsSync(base) ? readdirSync(base).map((f) => join(base, f)) : []);
+      for (const doc of docs) {
+        if (!existsSync(doc) || !doc.endsWith(".md")) continue;
+        const src = readFileSync(doc, "utf8");
+        const re = /engine\/([a-z-]+\.mjs)"?\s*\\?\s*\n?\s*([a-z-]+)?/g;
+        let m;
+        while ((m = re.exec(src))) {
+          const [, mod, verb] = m;
+          const key = `${mod} ${verb || ""}`.trim();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          if (!existsSync(join(KIT, "engine", mod))) {
+            missing.push(`${skill}: engine/${mod} does not exist`);
+            continue;
+          }
+          const src2 = readFileSync(join(KIT, "engine", mod), "utf8");
+          // A module invoked as a command has to BE one. A bare library exits 0
+          // and writes nothing, which is indistinguishable from success.
+          const isCli = /process\.argv/.test(src2);
+          if (!isCli) missing.push(`${skill}: engine/${mod} is invoked as a command but has no CLI`);
+        }
+      }
+    }
+  }
+
+  assert.deepEqual(missing, [], `skills call engine code that cannot answer:\n  ${missing.join("\n  ")}`);
+  assert.ok(seen.size >= 6, `expected to find engine invocations in the skills, found ${seen.size}`);
+});
+
+/* --------------------------------------------------- the extension can connect */
+
+test("the extension and the server agree on the default port", () => {
+  // They did not. The server defaulted to 7749 and the extension to 8899, so on
+  // a default install the capture POST could never connect, and neither side
+  // could report why: the server logs nothing for a connection it never
+  // receives, and the extension sees a bare network failure.
+  //
+  // Unit tests could not catch it. Each side was internally consistent and each
+  // suite passed. Only wiring them together shows it, which is what this file
+  // is for.
+  const portOf = (file, name) => {
+    const src = readFileSync(join(KIT, file), "utf8");
+    const m = new RegExp(`const ${name} = (\\d+)`).exec(src);
+    assert.ok(m, `${file} no longer declares ${name}; this test cannot check the agreement`);
+    return Number(m[1]);
+  };
+
+  const server = portOf("engine/serve.mjs", "DEFAULT_PORT");
+  assert.equal(portOf("extension/background.js", "DEFAULT_PORT"), server);
+  assert.equal(portOf("extension/popup.js", "DEFAULT_PORT"), server);
+
+  // The number a user actually sees prefilled in the popup has to match too. It
+  // is the one copy that is not a constant, so it is the one most likely to rot.
+  const html = readFileSync(join(KIT, "extension/popup.html"), "utf8");
+  const shown = /id="port"[^>]*value="(\d+)"/.exec(html);
+  assert.ok(shown, "popup.html no longer prefills a port");
+  assert.equal(Number(shown[1]), server);
+});
+
+test("the extension can reach only the local machine", () => {
+  // The defensibility of the LinkedIn source rests on this being structural.
+  const manifest = JSON.parse(readFileSync(join(KIT, "extension/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.host_permissions, ["http://127.0.0.1/*"]);
+  assert.ok(!manifest.permissions.includes("alarms"), "an alarm would make it a crawler");
+  assert.ok(!manifest.content_scripts, "a declared content script would run without a click");
 });
 
 test("the shipped rules block a denied role and a draft-mode send", () => {

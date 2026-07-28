@@ -211,7 +211,7 @@ export async function rebuild(P, { prune = false } = {}) {
   const upsertApp = db.prepare(
     `INSERT INTO applications (id, company_id, ${cols}, stage, updated_at) ` +
       `VALUES (?, ?, ${marks}, ?, datetime('now')) ` +
-      `ON CONFLICT(id) DO UPDATE SET company_id=excluded.company_id, stage=excluded.stage, ${upd}, updated_at=datetime('now')`,
+      `ON CONFLICT(id) DO UPDATE SET company_id=excluded.company_id, ${upd}, updated_at=datetime('now')`,
   );
   // Seeding alone leaves a hole: a role discovered on Monday seeds "discovered",
   // and when it is actually sent on Tuesday the DO UPDATE above will not touch

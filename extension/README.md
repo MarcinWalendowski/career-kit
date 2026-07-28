@@ -49,7 +49,7 @@ Then wire it to your workspace:
 2. It prints a token once at boot and writes it to
    `$CAREER_HOME/.previewer-token`.
 3. Click the extension button, paste the token, set the port if you changed it
-   from `8899`, and press **Check the local server**. It should report your
+   from `7749`, and press **Check the local server**. It should report your
    workspace path.
 
 The token is stored in `chrome.storage.local`. It rotates on every previewer
