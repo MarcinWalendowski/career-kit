@@ -1,100 +1,144 @@
 ---
 name: career-setup
-description: Provision a Career Kit workspace at $CAREER_HOME. Creates the directory, runs git init, copies the templates, imports an existing CV or LinkedIn export into a first knowledge base, derives a voice file from the user's own Sent folder with explicit consent, sets the mail account, picks the mode, and runs a health check. Use when the user says "set up career kit", "I just installed the career plugin", "create my career workspace", "onboard me for job hunting", or when any other career skill exits 2 with "no workspace found".
+description: Provision a Career Kit workspace and onboard the user in one pass. Runs the single provisioning command, imports an existing CV or LinkedIn export into a first knowledge base, fills the profile from what the import could not answer, derives a voice file from the user's own Sent folder with explicit consent, sets the mode, and runs one health check. Use when the user says "set up career kit", "I just installed the career plugin", "create my career workspace", "onboard me for job hunting", or when any other career skill exits 2 with "no workspace found".
 ---
 
 # Set up a career workspace
 
-This is the **only** skill that may create `$CAREER_HOME`. Every other skill reads a workspace that
-already exists and exits 2 if it does not. Never create one as a side effect of something else.
+This is the **only** skill that may create `$CAREER_HOME`. Every other skill reads a
+workspace that already exists and exits 2 if it does not. Never create one as a side
+effect of something else.
 
-Work through the steps in order and confirm before writing. These files are the user's, they hold
-their identity and their voice, and they are the ones an agent will read at send time.
+**Setup is a conversation with two engine calls in it.** One at the start to provision,
+one at the end to check. Everything between them is talking. Do not hand the user a
+list of commands to run: if you are about to write "now run X", you are doing the part
+that is supposed to be yours.
 
-## 1. Pick the location
-
-```bash
-echo "${CAREER_HOME:-<unset>}"
-```
-
-- `$CAREER_HOME` set: use it. Do not propose an alternative.
-- Unset: default to `~/career`. Say the path and get a yes before creating anything.
-- If the target already contains `profile.yaml` this is not a fresh setup. Stop, report the path,
-  and offer a repair pass instead: run only the steps whose files are missing, and never overwrite.
-
-## 2. Create the directory and a git repo
+## 1. Provision, in one call
 
 ```bash
-mkdir -p "$CAREER_HOME"/{cv,jobs/inbox,drafts,outputs/receipts,outputs/reports}
-git -C "$CAREER_HOME" init
-cp "$CLAUDE_PLUGIN_ROOT/templates/workspace.gitignore" "$CAREER_HOME/.gitignore"
+node "$CLAUDE_PLUGIN_ROOT/engine/init.mjs"
 ```
 
-The workspace `.gitignore` excludes the database, the ledger, leases, receipts, drafts and job
-records. A user who pushes their workspace by accident pushes a skeleton, not a mailbox. Do not run
-`git commit`: the history is theirs to start.
+Creates the directory tree, runs `git init`, writes the workspace `.gitignore`, copies
+the four templates, and sets `mode: draft`. Prints JSON: `home`, `fresh`, `created[]`,
+`existed[]`, `git`, `fill_markers`.
 
-## 3. Copy the templates
+It is **idempotent and never overwrites**, so there is no "is this a fresh setup"
+branch to reason about and no repair mode to invoke. `fresh: false` with an empty
+`created[]` means the workspace was already there and nothing was touched. Say so and
+move to step 2 rather than starting over.
 
-```bash
-for f in profile rules voice knowledge-base; do
-  src=$(ls "$CLAUDE_PLUGIN_ROOT/templates/$f".example.*)
-  dst="$CAREER_HOME/$(basename "$src" | sed 's/\.example//')"
-  [ -e "$dst" ] || cp "$src" "$dst"
-done
-```
+Pass `--home <path>` only if the user names a location. Otherwise `$CAREER_HOME`, then
+`~/career`. If `$CAREER_HOME` is unset **and** `~/career` already holds unrelated
+files, say the path you are about to use and get a yes first.
 
-Then fill `profile.yaml` in one short interview: name, email, phone, location, links, work
-authorization per region, relocation, notice period, mail account, CV path.
+The workspace `.gitignore` excludes the database, the ledger, leases, receipts, drafts
+and job records, so a user who pushes their workspace by accident pushes a skeleton and
+not a mailbox. `init` does not commit: the history is theirs to start.
 
-Then read `rules.yaml: roles.allow` and `roles.deny` with the user and adjust them to their field.
-**The filter matches contiguous phrases on word boundaries**, so `founding engineer` does not match
-"Founding Software Engineer". Add each real-world title variant rather than a keyword and hope: the
-shipped list only works because it carries both the short and the long forms. A title that should
-have passed and did not shows up later as a `role-excluded` block, at the point where the user least
-expects one.
+## 2. Ask for the CV first
 
-Say why while you ask. Every field in `profile.yaml` is an answer some application form will demand
-later. Answering once, here, is what stops two agents on two different days giving one company
-contradictory answers to "would you relocate". That has happened, to the same job posting, seven
-minutes apart. Nothing in this file is decided at send time.
+**This is the step that makes the rest short, so do it before any interview.** Ask for
+one of: a CV file (PDF, DOCX, Markdown), a LinkedIn data export, or nothing at all.
 
-## 4. Import an existing CV or LinkedIn export
+A CV answers most of `profile.yaml` and all of `knowledge-base.md` in one pass. Asking
+the identity questions first means asking for things the file you are about to read
+already contains, which is how a five-minute setup becomes a twenty-minute one.
 
-Ask for one of: a CV file (PDF, DOCX, Markdown), a LinkedIn data export, or nothing at all.
-
-Extract what is there into `$CAREER_HOME/knowledge-base.md` and write `[[FILL]]` wherever a section
-exists but the source did not supply it. An honest gap marker is worth more than a plausible
-sentence, because everything downstream treats this file as fact.
+Extract into `$CAREER_HOME/knowledge-base.md` and write `[[FILL]]` wherever a section
+exists but the source did not supply it. An honest gap marker is worth more than a
+plausible sentence, because everything downstream treats this file as fact.
 
 Full extraction rules and the section list: `references/import.md`.
 
-## 5. Derive `voice.md`, with consent asked before anything is read
+## 3. Fill the gaps, in one interview
 
-A derived voice file is the highest-value artifact in the workspace and the one that reads private
-mail to produce. **Say exactly what will be read before reading it.** Name the account, the folder,
-the number of messages and the fact that nothing leaves the machine. Then wait for a yes.
+Now fill `profile.yaml`, but **only what the import could not answer.** Read what you
+extracted, then ask for what is genuinely missing. In practice that is the set no CV
+carries:
 
-Offer the decline path in the same breath, not as a fallback after a refusal: a template `voice.md`
-plus a short set of questions produces a usable file with no mail access at all.
+- work authorization per region, and whether sponsorship is needed
+- relocation: the yes/no a radio button gets, and the sentence a free-text box gets
+- notice period
+- the sending account, and the display name a recipient sees
+- anything still marked `[[FILL]]` that a form will demand
 
-Whichever path runs, write the **Provenance** section: source, date, method, sample size, reviewer.
-It is not decoration. A voice file with no provenance gets overwritten by the next agent that thinks
-it knows better, and the reason a good one is valuable is that it records what it cost to learn.
+Say why while you ask. Every field here is an answer some application form will demand
+later, and answering once, now, is what stops two agents on two different days giving
+one company contradictory answers to "would you relocate". That has happened, to the
+same job posting, seven minutes apart. **Nothing in this file is decided at send time.**
 
-Consent script, extraction method, the question set for the decline path, and the provenance block:
-`references/voice-derivation.md`.
+Then read `rules.yaml: roles.allow` and `roles.deny` with the user and adjust them to
+their field. **The filter matches contiguous phrases on word boundaries**, so
+`founding engineer` does not match "Founding Software Engineer". Add each real-world
+title variant rather than a keyword and hope: the shipped list only works because it
+carries both the short and the long forms. A title that should have passed and did not
+shows up later as a `role-excluded` block, at the point where the user least expects
+one.
 
-## 6. Set the mail account
+## 4. Derive `voice.md`, with consent asked before anything is read
 
-Write the sending account into `profile.yaml` under `mail.account`, and confirm it is the account the
-user wants recruiters to see. If their mail tool has several accounts, the default is rarely the
-professional one, and an application sent from the wrong address cannot be taken back.
+**This stop is deliberate. Do not fold it into the flow above.**
 
-## 7. Set the mode, at `draft`
+A derived voice file is the highest-value artifact in the workspace and the one that
+reads private mail to produce. **Say exactly what will be read before reading it.** Name
+the account, the folder, the number of messages, and the fact that nothing leaves the
+machine. Then wait for a yes.
 
-Write `mode: draft` into `rules.yaml`, whatever the template ships. Then tell the user the one line
-that moves them up:
+Offer the decline path in the same breath, not as a fallback after a refusal: a
+template `voice.md` plus a short set of questions produces a usable file with no mail
+access at all.
+
+Whichever path runs, write the **Provenance** section: source, date, method, sample
+size, reviewer. It is not decoration. A voice file with no provenance gets overwritten
+by the next agent that thinks it knows better, and the reason a good one is valuable is
+that it records what it cost to learn.
+
+Consent script, extraction method, the question set for the decline path, and the
+provenance block: `references/voice-derivation.md`.
+
+## 5. Mail is optional. Say so plainly
+
+**Career Kit works with no mail tool at all.** A new workspace is in `draft` mode, and
+draft mode never touches a mailbox: everything is written to `drafts/` and the gate
+blocks every send channel. Do not present mail as a prerequisite, and do not leave
+onboarding half-finished because it is missing.
+
+Check what you are actually holding: your own MCP tool list, not `doctor`'s
+`mail.detected`, which is config-file evidence and says so.
+
+- **You have mail tools:** name the account you will send from, confirm it is the one
+  the user wants recruiters to see, and write it to `profile.yaml: mail.account`. If
+  their mail tool has several accounts, the default is rarely the professional one, and
+  an application sent from the wrong address cannot be taken back.
+- **You do not:** say the true thing (nothing is blocked in draft mode) and offer the
+  one-liner for a local IMAP/SMTP server, which needs no browser and no OAuth:
+
+  ```
+  claude mcp add email-local -- npx -y email-local-mcp
+  ```
+
+  On macOS, offer the Homebrew form instead if the user has `brew` and would rather
+  install a binary than fetch through `npx`:
+
+  ```
+  brew install marcinwalendowski/tap/email-local-mcp
+  claude mcp add email-local -- email-local-mcp
+  ```
+
+  Offer one, not both. Two install paths for an optional component is the kind of
+  choice that turns a thirty-second step into a decision, which is the opposite of
+  what this setup is for.
+
+  Then move on whether they take it or not. It is genuinely additive: it becomes
+  load-bearing at `mode: review`, when `career-apply` needs a real Sent-folder count
+  before it will allow a send, and when `career-inbox` starts matching replies.
+
+## 6. Confirm the mode, at `draft`
+
+`init` already wrote `mode: draft`. Your job is not to set it. It is to make sure the
+user knows the ladder they are on:
 
 ```yaml
 mode: draft     # draft -> nothing is sent, everything is written to drafts/
@@ -102,25 +146,33 @@ mode: draft     # draft -> nothing is sent, everything is written to drafts/
                 # autopilot -> also needs the channel named in autopilot_channels
 ```
 
-Say the ladder plainly: `draft` writes drafts, `review` sends what the user approved, `autopilot`
-sends without a per-send approval and needs a second opt-in naming the channel. A form submit has no
-Sent folder and no undo, so `autopilot` on a form channel is the one setting worth reading twice.
+Say it plainly: `draft` writes drafts, `review` sends what the user approved,
+`autopilot` sends without a per-send approval and needs a second opt-in naming the
+channel. A form submit has no Sent folder and no undo, so `autopilot` on a form channel
+is the one setting worth reading twice.
 
-## 8. Health check
+Tell them to read a few drafts they actually agree with before changing that line.
+
+## 7. Health check, in one call
 
 ```bash
-node "$CLAUDE_PLUGIN_ROOT/engine/gate.mjs" status
-node "$CLAUDE_PLUGIN_ROOT/engine/validate.mjs" --all
-node "$CLAUDE_PLUGIN_ROOT/engine/render.mjs" --target html
+node "$CLAUDE_PLUGIN_ROOT/engine/doctor.mjs" --json
 ```
 
-Expected on a fresh workspace: `status` reports `mode: draft`, no open leases and no blocks;
-`validate --all` passes over zero job records, which is a valid pipeline; `render` writes a CV and
-the hidden-text lint passes. Any non-zero exit here is a setup bug, not a user error - report the
-command and its stderr rather than working around it.
+Exit **0** ready, **1** usable with homework, **2** no workspace. On a workspace that
+was just set up, **exit 1 is the expected result**, the knowledge-base scaffold ships
+with `[[FILL]]` markers and those are homework, not a fault. Exit 2 here is a setup
+bug: report the command and its output rather than working around it.
+
+Read `next` and pass it on. That field is the engine's own answer to "what now", and it
+is computed from disk.
 
 ## Finish
 
-Tell the user: the workspace path, that it is a git repo they own, which files still hold `[[FILL]]`
-markers, where `voice.md` came from, that the mode is `draft`, and the one line to change to reach
-`review`. Point them at `career-kb` as the only place facts get edited.
+Tell the user, in a few sentences: the workspace path and that it is a git repo they
+own; which files still hold `[[FILL]]` markers; where `voice.md` came from; that the
+mode is `draft` and the one line that moves them to `review`; and whether a mail tool
+is wired or not.
+
+Then point them at the two things they will use next: **`career-kb`** is the only place
+facts get edited, and **`/career`** is the one command for everything else.

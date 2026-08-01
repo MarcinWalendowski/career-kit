@@ -1,10 +1,12 @@
 {
   "name": "career-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Career Kit OS engine. Zero runtime dependencies, on purpose.",
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
     "career-gate": "engine/gate.mjs",
     "career-db": "engine/db.mjs",

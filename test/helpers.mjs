@@ -23,6 +23,19 @@ export const GATE = join(ENGINE, "gate.mjs");
 export const DB = join(ENGINE, "db.mjs");
 export const LOG = join(ENGINE, "log.mjs");
 export const VALIDATE = join(ENGINE, "validate.mjs");
+export const INIT = join(ENGINE, "init.mjs");
+export const DOCTOR = join(ENGINE, "doctor.mjs");
+
+/**
+ * An empty scratch directory that is NOT a workspace, for the two commands that
+ * have to work before one exists. makeWorkspace() cannot serve here: it writes
+ * profile.yaml, which is the very marker init and doctor are deciding on.
+ */
+export function makeEmptyDir(t) {
+  const dir = mkdtempSync(join(tmpdir(), "career-kit-empty-"));
+  t.after(() => rmSync(dir, { recursive: true, force: true }));
+  return dir;
+}
 
 /**
  * The banned character, written as an escape so this file does not itself
@@ -190,6 +203,8 @@ export function makeWorkspace(opts = {}) {
     db: (argv = []) => runSync(home, DB, argv),
     log: (argv) => runSync(home, LOG, argv),
     validate: (argv = []) => runSync(home, VALIDATE, argv),
+    init: (argv = ["--no-git"]) => runSync(home, INIT, argv),
+    doctor: (argv = ["--json"]) => runSync(home, DOCTOR, argv),
     runAsync: (argv) => runAsync(home, GATE, argv),
     cleanup: () => rmSync(home, { recursive: true, force: true }),
   };

@@ -19,6 +19,8 @@ import { join, relative, resolve } from "node:path";
 const ROOT = resolve(new URL("..", import.meta.url).pathname);
 const TEMPLATES = join(ROOT, "templates");
 const EXTENSION = join(ROOT, "extension");
+const SKILLS = join(ROOT, "skills");
+const COMMANDS = join(ROOT, "commands");
 const README = join(ROOT, "README.md");
 
 const EM_DASH = String.fromCharCode(0x2014);
@@ -37,7 +39,17 @@ function walk(dir) {
 
 const templateFiles = walk(TEMPLATES);
 const extensionFiles = walk(EXTENSION);
-const publicFiles = [...templateFiles, ...extensionFiles, README];
+
+/**
+ * The skills and the command ship in the plugin and are read by an agent, so
+ * they are public in every sense that matters here. They were outside this
+ * gate until 2026-08-01, which is the worse half of the miss: SKILL.md is where
+ * the em-dash rule is TOLD to the agent, and the file doing the telling was the
+ * one file nobody checked for it.
+ */
+const skillFiles = walk(SKILLS);
+const commandFiles = walk(COMMANDS);
+const publicFiles = [...templateFiles, ...extensionFiles, ...skillFiles, ...commandFiles, README];
 const read = (p) => readFileSync(p, "utf8");
 const rel = (p) => relative(ROOT, p);
 
@@ -268,19 +280,43 @@ test("no template or extension file contains personal data", () => {
   }
 });
 
-test("README.md carries the owner handle only inside the repo path", () => {
-  // The README must name the repo or nobody can install it, and the repo path
-  // contains the owner's GitHub handle. That is the ONE allowed occurrence:
-  // a public repo address, not personal data. Everything else is banned.
-  const body = read(README);
-  assert.ok(!/\/Users\//.test(body), "README must not contain a machine-local path");
+/**
+ * The owner's handle is allowed in exactly one shape: a public install address
+ * somebody has to be able to type. Everything else is personal data.
+ *
+ * Two addresses qualify. The plugin's own repo, without which nobody can
+ * install it, and the Homebrew tap that serves the optional mail server, which
+ * is a tap name and not a person even though it spells like one.
+ */
+const ALLOWED_HANDLE_CONTEXT =
+  /(marketplace add|github\.com\/)\s*MarcinWalendowski\/career-kit|brew (install|tap)[^\n]*marcinwalendowski\/tap/i;
 
-  const hits = body.match(/Marcin\w*/gi) || [];
-  for (const hit of hits) {
-    const at = body.indexOf(hit);
-    const context = body.slice(Math.max(0, at - 30), at + hit.length + 20);
-    assert.match(context, /(marketplace add|github\.com\/)\s*MarcinWalendowski\/career-kit/,
-      `README mentions "${hit}" outside the repo path: ...${context}...`);
+function assertHandleOnlyInAddresses(file) {
+  const body = read(file);
+  assert.ok(!/\/Users\//.test(body), `${rel(file)} must not contain a machine-local path`);
+
+  // Match with indices rather than indexOf(hit): indexOf always returns the
+  // FIRST occurrence, so with two or more hits every context after the first
+  // described the wrong piece of text, and the assertion silently graded the
+  // same line over and over.
+  for (const m of body.matchAll(/Marcin\w*/gi)) {
+    const at = m.index;
+    const context = body.slice(Math.max(0, at - 40), at + m[0].length + 30);
+    assert.match(context, ALLOWED_HANDLE_CONTEXT,
+      `${rel(file)} mentions "${m[0]}" outside a public install address: ...${context}...`);
+  }
+}
+
+test("README.md carries the owner handle only inside a public install address", () => {
+  assertHandleOnlyInAddresses(README);
+});
+
+test("no skill or command leaks personal data", () => {
+  // These ship in the plugin and are read by an agent, so they are as public as
+  // the README. They were outside every de-personalisation check until
+  // 2026-08-01.
+  for (const file of [...skillFiles, ...commandFiles]) {
+    assertHandleOnlyInAddresses(file);
   }
 });
 

@@ -18,16 +18,38 @@ It is open source, MIT, with no paid tier and no hosted anything.
 /plugin install career-kit@career-kit
 ```
 
-Then, in Claude Code:
+Then, in Claude Code, one command for everything:
 
 ```
-career-setup
+/career
 ```
 
-That provisions your workspace. Node 20 or later, and nothing else: the engine
-has **zero runtime dependencies**. That is a constraint, not a boast. It is what
-lets setup work on a fresh machine, and it keeps a supply chain out of a tool
-that reads your Sent folder and submits forms under your name.
+That is the whole interface. With no workspace it onboards you in the
+conversation: it asks for your CV, fills the gaps it could not read from it,
+and provisions everything in one call. With a workspace it reads the pipeline
+and does what you asked for. There is nothing else to run and no order to learn.
+
+Node 20 or later, and nothing else: the engine has **zero runtime
+dependencies**. That is a constraint, not a boast. It is what lets setup work on
+a fresh machine, and it keeps a supply chain out of a tool that reads your Sent
+folder and submits forms under your name.
+
+**A mail tool is optional.** A new workspace starts in `draft` mode, which never
+touches a mailbox. Everything is written, nothing is sent. Mail becomes
+load-bearing only when you move to `review`. If you want it, one line adds a
+local IMAP/SMTP server with no browser and no OAuth:
+
+```
+claude mcp add email-local -- npx -y email-local-mcp
+```
+
+On macOS you can install it with Homebrew instead, if you would rather have a
+real binary than an `npx` fetch:
+
+```
+brew install marcinwalendowski/tap/email-local-mcp
+claude mcp add email-local -- email-local-mcp
+```
 
 ---
 
@@ -55,31 +77,19 @@ the code is destroyed by an update.
 ## Quickstart
 
 ```
-career-setup                        # provision ~/career, import a CV, set the mode
-career-kb  "add the CI cost saving from last quarter"  # the only write path for facts
-career-sources --query "founding engineer" --remote
-career-tailor <job-id>              # JD in, match report out
-career-apply  <job-id>              # drafts; sends only if the gate allows it
-career-review                       # what is waiting on you
+/career                             # onboards you, then runs everything after that
 ```
 
-`career-setup` starts you in `draft` mode: everything is written, nothing is
-sent. Read a few drafts you actually agree with before you change one line.
+Then just say what you want, in the same command:
 
----
+```
+/career find me founding engineer roles, remote
+/career should I apply to this?  <paste a job posting>
+/career where am I
+```
 
-## The eight skills
-
-| Skill | What it does |
-|---|---|
-| `career-setup` | Provisions `$CAREER_HOME`, imports an existing CV or LinkedIn export into a first knowledge base with `[[FILL]]` markers, derives `voice.md` from your own Sent folder with explicit consent, picks the mode, runs a health check |
-| `career-kb` | The only write path for facts. Edits the knowledge base, then regenerates every derived surface |
-| `career-sources` | Pulls roles from the adapters, resolves the real apply route, runs the identity check, writes `jobs/<id>.json` |
-| `career-tailor` | Job description in, match report out, against what your knowledge base actually supports |
-| `career-apply` | Drafts the application and puts every irreversible step through the gate |
-| `career-inbox` | Matches replies to a stored `message_id`, classifies reply against auto-ack against rejection, moves the stage |
-| `career-review` | Pipeline digest, what is overdue, a weekly report |
-| `career-serve` | Starts the local previewer on `127.0.0.1`, which edits the knowledge base and never a rendered file |
+You start in `draft` mode: everything is written, nothing is sent. Read a few
+drafts you actually agree with before you change one line.
 
 ---
 
@@ -201,11 +211,41 @@ worked well enough to be worth handing to someone else.
 
 ---
 
+## Granular commands
+
+`/career` routes to eight skills. Each one is directly invocable by name if you
+would rather drive the pieces yourself. That is supported, not a fallback.
+
+| Skill | What it does |
+|---|---|
+| `career-setup` | Provisions `$CAREER_HOME`, imports an existing CV or LinkedIn export into a first knowledge base with `[[FILL]]` markers, derives `voice.md` from your own Sent folder with explicit consent, sets the mode, runs a health check |
+| `career-kb` | The only write path for facts. Edits the knowledge base, then regenerates every derived surface |
+| `career-sources` | Pulls roles from the adapters, resolves the real apply route, runs the identity check, writes `jobs/<id>.json` |
+| `career-tailor` | Job description in, match report out, against what your knowledge base actually supports |
+| `career-apply` | Drafts the application and puts every irreversible step through the gate |
+| `career-inbox` | Matches replies to a stored `message_id`, classifies reply against auto-ack against rejection, moves the stage |
+| `career-review` | Pipeline digest, what is overdue, a weekly report |
+| `career-serve` | Starts the local previewer on `127.0.0.1`, which edits the knowledge base and never a rendered file |
+
+The engine underneath is a plain node CLI with no dependencies, so you can drive
+it without an agent at all:
+
+```
+engine/init.mjs      provision a workspace; idempotent, never overwrites
+engine/doctor.mjs    the whole state in one call; 0 ready, 1 homework, 2 none
+engine/gate.mjs      status, check, claim, record, release, resolve, leases, verify
+engine/render.mjs    knowledge base + theme -> HTML, Markdown, PDF
+engine/serve.mjs     the previewer
+```
+
+---
+
 ## Repo layout
 
 ```
 .claude-plugin/   marketplace.json + plugin.json. This repo is both.
-skills/           8 skills
+commands/         /career, the one front door
+skills/           8 skills, each directly invocable
 engine/           node ESM, zero dependencies
 previewer/        local web app, served by engine/serve.mjs
 extension/        MV3 Chrome extension, no build step
