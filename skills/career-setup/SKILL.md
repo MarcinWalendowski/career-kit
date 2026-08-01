@@ -70,12 +70,27 @@ one company contradictory answers to "would you relocate". That has happened, to
 same job posting, seven minutes apart. **Nothing in this file is decided at send time.**
 
 Then read `rules.yaml: roles.allow` and `roles.deny` with the user and adjust them to
-their field. **The filter matches contiguous phrases on word boundaries**, so
-`founding engineer` does not match "Founding Software Engineer". Add each real-world
-title variant rather than a keyword and hope: the shipped list only works because it
-carries both the short and the long forms. A title that should have passed and did not
-shows up later as a `role-excluded` block, at the point where the user least expects
-one.
+their field. **The filter matches contiguous phrases on word boundaries**
+(`gate.mjs`: `` new RegExp(`\\b${phrase}\\b`, "i") ``), so `founding engineer` does not
+match "Founding Software Engineer".
+
+**Do not trust the shipped list to cover a field it was not written for.** Measured
+against the real matcher, the stock `roles.allow` blocks all six of these:
+
+    Site Reliability Engineer     DevOps Engineer
+    Principal Engineer            Cloud Engineer
+    Distributed Systems Engineer  Systems Engineer
+
+Every one is a title a backend or platform search hits constantly, and each surfaces
+later as a `role-excluded` block at the point where the user least expects one. Note
+also that "Founding Software Engineer" passes only because the unrelated
+`software engineer` entry happens to catch it, not because the list carries both the
+short and long forms. It does not. Do not reason from the list's apparent coverage.
+
+So **check the titles the user actually expects**, rather than reading the list and
+assuming. Take three or four real postings they would want, and confirm each one
+matches an `allow` entry on a word boundary. Add every real-world variant you find
+missing. A keyword that "looks close" is not a match.
 
 ## 4. Derive `voice.md`, with consent asked before anything is read
 

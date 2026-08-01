@@ -59,7 +59,14 @@ test("a new workspace starts in draft, one rung below the template", (t) => {
 test("the fill count reports what is actually in the files", (t) => {
   const home = makeEmptyDir(t);
   const r = init(home);
-  const onDisk = (readFileSync(join(home, "knowledge-base.md"), "utf8").match(/\[\[FILL\]\]/g) || []).length;
+  // Ground truth is `[[FILL`, the PREFIX. This test used to compute it with
+  // `\[\[FILL\]\]` — the bare form only — which is the same defect it was
+  // meant to catch, so it compared a wrong count against a wrong count and
+  // passed. The shipped scaffold uses the annotated `[[FILL: ...]]` form
+  // throughout, so bare-only saw 35 of its 61 markers.
+  const text = readFileSync(join(home, "knowledge-base.md"), "utf8");
+  const onDisk = (text.match(/\[\[FILL/g) || []).length;
+  assert.ok(onDisk > (text.match(/\[\[FILL\]\]/g) || []).length, "scaffold must hold annotated markers");
   assert.equal(r.json.fill_markers["knowledge-base.md"], onDisk);
   assert.equal(r.json.fill_total, onDisk);
 });

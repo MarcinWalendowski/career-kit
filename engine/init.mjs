@@ -29,7 +29,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { paths, ensureRuntimeDirs, templates } from "./paths.mjs";
+import { paths, ensureRuntimeDirs, templates, countFillText } from "./paths.mjs";
 
 /* ── args ──────────────────────────────────────────────────────────────── */
 
@@ -73,11 +73,9 @@ const SEEDS = [
   { from: "knowledge-base.scaffold.md", to: "knowledge-base.md" },
 ];
 
-const FILL = /\[\[FILL\]\]/g;
-
 const countFill = (path) => {
   if (!existsSync(path)) return 0;
-  return (readFileSync(path, "utf8").match(FILL) || []).length;
+  return countFillText(readFileSync(path, "utf8"));
 };
 
 /**

@@ -29,7 +29,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { paths, PLUGIN_ROOT } from "./paths.mjs";
+import { paths, PLUGIN_ROOT, countFillText, isUneditedTemplate } from "./paths.mjs";
 import { findChrome } from "./render.mjs";
 
 const argv = process.argv.slice(2);
@@ -52,7 +52,6 @@ function locate() {
 }
 
 const FILES = ["profile.yaml", "rules.yaml", "voice.md", "knowledge-base.md"];
-const FILL = /\[\[FILL\]\]/g;
 
 /* ── mail ──────────────────────────────────────────────────────────────── */
 
@@ -152,8 +151,12 @@ const P = paths(loc.home);
 for (const name of FILES) {
   const path = join(loc.home, name);
   const present = existsSync(path);
-  const fill = present ? (readFileSync(path, "utf8").match(FILL) || []).length : 0;
-  report.files[name] = { present, fill };
+  const text = present ? readFileSync(path, "utf8") : "";
+  const fill = present ? countFillText(text) : 0;
+  // A template still carrying its shipped persona is NOT done, however few
+  // markers it has. profile.yaml and voice.md ship with none at all.
+  const untouched = present && isUneditedTemplate(name, text);
+  report.files[name] = { present, fill, untouched };
   report.fill_total += fill;
 }
 
@@ -187,6 +190,13 @@ function nextAction(r) {
   }
   const missing = FILES.filter((f) => !r.files[f].present);
   if (missing.length) return `Missing ${missing.join(", ")}. Re-run engine/init.mjs; it will not touch what exists.`;
+  // Outranks marker counts: an untouched template has NO markers to count, so
+  // it would otherwise score clean and never be named here. This is the state
+  // where a draft goes out carrying somebody else's voice.
+  const untouched = FILES.filter((f) => r.files[f].untouched);
+  if (untouched.length) {
+    return `${untouched.join(" and ")} still carr${untouched.length > 1 ? "y" : "ies"} the shipped example persona (Ada Lovelace). Nothing here is yours yet. Run career-setup, or edit ${untouched.length > 1 ? "them" : "it"} by hand before anything is drafted.`;
+  }
   if (r.files["knowledge-base.md"].fill) {
     return `knowledge-base.md still has ${r.files["knowledge-base.md"].fill} [[FILL]] marker(s). Fill them with career-kb before tailoring anything.`;
   }
@@ -208,7 +218,7 @@ report.next = nextAction(report);
 const degraded =
   !report.node.ok ||
   report.fill_total > 0 ||
-  Object.values(report.files).some((f) => !f.present) ||
+  Object.values(report.files).some((f) => !f.present || f.untouched) ||
   (report.gate?.expiredLeases ?? 0) > 0;
 
 emit(report, degraded ? 1 : 0);

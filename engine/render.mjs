@@ -38,7 +38,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PLUGIN_ROOT, slug, templates } from "./paths.mjs";
+import { PLUGIN_ROOT, slug, templates, countFillText } from "./paths.mjs";
 
 /* =========================================================================
  * Typed error
@@ -922,7 +922,7 @@ export function documentFromMarkdown(kbText) {
   });
 
   parts.name = parts.name || title || "";
-  const fills = (kbText.match(/\[\[FILL/g) || []).length;
+  const fills = countFillText(kbText);
 
   return {
     html: assemblePage(parts),
@@ -1822,7 +1822,7 @@ export async function renderBrief(P, opts = {}) {
     __kb: existsSync(P.kb) ? readFileSync(P.kb, "utf8") : "",
   };
   const text = renderTemplate(readFileSync(templatePath, "utf8"), ctx);
-  return { text, fills: (text.match(/\[\[FILL/g) || []).length };
+  return { text, fills: countFillText(text) };
 }
 
 /* =========================================================================
