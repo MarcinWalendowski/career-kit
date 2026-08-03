@@ -128,3 +128,13 @@ this skill's job:
 Report: how many records written, how many blocked and why (denied role, identity mismatch, no
 route), which companies are not visibly recruiting and what was checked, and any adapter that
 returned zero where it should not have.
+
+Then offer the board. A pull of any size ends with more rows than a chat window can show, and
+**career-board** is where the user reads through them and marks a shortlist:
+
+```bash
+node "$CLAUDE_PLUGIN_ROOT/engine/board.mjs"
+```
+
+Offer it, do not run it as a matter of course after every pull. A board rebuilt on nothing is a page
+the user has already read.

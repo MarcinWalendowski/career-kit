@@ -25,6 +25,7 @@ export const LOG = join(ENGINE, "log.mjs");
 export const VALIDATE = join(ENGINE, "validate.mjs");
 export const INIT = join(ENGINE, "init.mjs");
 export const DOCTOR = join(ENGINE, "doctor.mjs");
+export const BOARD = join(ENGINE, "board.mjs");
 
 /**
  * An empty scratch directory that is NOT a workspace, for the two commands that
@@ -205,6 +206,7 @@ export function makeWorkspace(opts = {}) {
     validate: (argv = []) => runSync(home, VALIDATE, argv),
     init: (argv = ["--no-git"]) => runSync(home, INIT, argv),
     doctor: (argv = ["--json"]) => runSync(home, DOCTOR, argv),
+    board: (argv = ["--json"]) => runSync(home, BOARD, argv),
     runAsync: (argv) => runAsync(home, GATE, argv),
     cleanup: () => rmSync(home, { recursive: true, force: true }),
   };

@@ -5,7 +5,8 @@ A job search that runs as a pipeline instead of a to-do list.
 Career Kit is a Claude Code plugin. It keeps one knowledge base as the source of
 truth for every career artifact you have, tailors an application per role,
 enforces the rules you set in code rather than in prose, pulls postings from ten
-sources, and gives you a local previewer to edit the result in.
+sources, puts the whole pipeline on one filterable page, and gives you a local
+previewer to edit the result in.
 
 It is open source, MIT, with no paid tier and no hosted anything.
 
@@ -57,7 +58,7 @@ claude mcp add email-local -- email-local-mcp
 
 | Layer | Where it lives | What is in it |
 |---|---|---|
-| **Plugin** | this repo, public | 8 skills, the node engine, the previewer, the extension, templates |
+| **Plugin** | this repo, public | 9 skills, the node engine, the board, the previewer, the extension, templates |
 | **Workspace** | `$CAREER_HOME`, default `~/career`, private, its own git repo | your profile, rules, voice, knowledge base, CV, job records, drafts, receipts |
 | **Live data** | wherever your existing files already are | untouched. Nothing moves out from under work in flight |
 
@@ -85,6 +86,7 @@ Then just say what you want, in the same command:
 ```
 /career find me founding engineer roles, remote
 /career should I apply to this?  <paste a job posting>
+/career show me the board
 /career where am I
 ```
 
@@ -152,6 +154,51 @@ company than the one you meant.
 
 ---
 
+## The board
+
+One page, every role in the pipeline, sorted by what needs a person first.
+`career-board` writes `outputs/board.html`: filter by state, source, workplace or
+text, sort by what is posted, and record a shortlist or a skip on each row as you
+read. Nothing on it sends anything.
+
+**A row's status is derived from the record of what happened, never from the
+browser.** That sounds obvious and it is the bug this page was rebuilt to fix. A
+board that only knew what the reader had clicked showed an already-submitted
+application as untouched work, with a live apply button on it. So the states come
+from the job records, the open leases and `career.db`, in that order of
+authority, and a stage you typed yourself outranks anything the page can derive.
+
+**Coverage is a property of the company, not of the row.** A company had one
+application parked at a question only its owner could answer, and the same
+company's second posting, scraped from a different board, rendered as fresh work.
+Applying to it would have spent that company's single application on a duplicate.
+Every row therefore carries what its siblings are doing: *company applied*,
+*company parked*, *company drafted*. The first two turn the shortlist button off
+and say why; the third is a warning, because choosing between two roles at one
+employer is a normal thing to be doing.
+
+Skipped rows stay on the page, struck through. A row that disappears when you
+reject it reads as new on the next pass, and you judge it again.
+
+The page cannot write to your workspace, so verdicts live in the browser until
+you export them:
+
+```
+engine/board.mjs                                   write outputs/board.html
+engine/board.mjs apply --verdicts <file> --dry-run  what it would change
+engine/board.mjs apply --verdicts <file>            move records: discovered, screened, skipped
+```
+
+`apply` moves records between those three statuses and no further. Drafting,
+claiming and sending belong to the gate, and a button in a browser is not a gate.
+It re-checks the company rule on the way in, because an exported file can be
+edited by hand, and it names every row it refuses rather than dropping it
+silently.
+
+When it cannot read something it says so on the page: no `career.db` means the
+stages shown are machine status only, and an unreadable job record is reported by
+name rather than quietly missing from the counts.
+
 ## The previewer
 
 A local web app on `127.0.0.1`, started with `career-serve`. Knowledge-base
@@ -194,6 +241,11 @@ Read these before you install.
 - **Adapters break when boards change their schema.** Contract tests against
   recorded fixtures make that fail loudly instead of silently returning zero
   jobs, but a broken adapter is a matter of when.
+- **The board does not rank roles.** It has no fit score, because scoring one
+  needs your knowledge base read against a full job description, which is
+  `career-tailor`'s job and costs a model call per posting. The board sorts by
+  what needs a person and by what the posting states; it will not tell you which
+  of two roles you are a better match for.
 - **PDF export needs headless Chrome** on the machine. HTML and Markdown export
   do not.
 - **It sends mail as you, from your account.** Caps are on by default and the
@@ -213,7 +265,7 @@ worked well enough to be worth handing to someone else.
 
 ## Granular commands
 
-`/career` routes to eight skills. Each one is directly invocable by name if you
+`/career` routes to nine skills. Each one is directly invocable by name if you
 would rather drive the pieces yourself. That is supported, not a fallback.
 
 | Skill | What it does |
@@ -225,6 +277,7 @@ would rather drive the pieces yourself. That is supported, not a fallback.
 | `career-apply` | Drafts the application and puts every irreversible step through the gate |
 | `career-inbox` | Matches replies to a stored `message_id`, classifies reply against auto-ack against rejection, moves the stage |
 | `career-review` | Pipeline digest, what is overdue, a weekly report |
+| `career-board` | Every role on one filterable page with its real status, and the shortlist you record on it read back into the job records |
 | `career-serve` | Starts the local previewer on `127.0.0.1`, which edits the knowledge base and never a rendered file |
 
 The engine underneath is a plain node CLI with no dependencies, so you can drive
@@ -235,6 +288,7 @@ engine/init.mjs      provision a workspace; idempotent, never overwrites
 engine/doctor.mjs    the whole state in one call; 0 ready, 1 homework, 2 none
 engine/gate.mjs      status, check, claim, record, release, resolve, leases, verify
 engine/render.mjs    knowledge base + theme -> HTML, Markdown, PDF
+engine/board.mjs     the whole pipeline as one page; apply reads its verdicts back
 engine/serve.mjs     the previewer
 ```
 
@@ -245,7 +299,7 @@ engine/serve.mjs     the previewer
 ```
 .claude-plugin/   marketplace.json + plugin.json. This repo is both.
 commands/         /career, the one front door
-skills/           8 skills, each directly invocable
+skills/           9 skills, each directly invocable
 engine/           node ESM, zero dependencies
 previewer/        local web app, served by engine/serve.mjs
 extension/        MV3 Chrome extension, no build step

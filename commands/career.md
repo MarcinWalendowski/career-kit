@@ -48,7 +48,13 @@ skill. Their descriptions carry the full trigger lists; this is the short form:
 | "add this to my knowledge base", any new fact about themselves | **career-kb** |
 | "any replies", "did anyone get back to me" | **career-inbox** |
 | "where am I", "what do I need to do today", "weekly review" | **career-review** |
+| "show me the board", "let me go through the list", "which have I applied to" | **career-board** |
 | "open the previewer", "let me see my CV" | **career-serve** |
+
+**career-review against career-board** is the one pair worth getting right, because both answer "how
+is it going". Review is prose and answers *what needs me today*. The board is a page and answers
+*what have I got*, which is the question once the pipeline is bigger than a chat window. If they want
+to read through roles one by one, they want the board.
 
 **No arguments, or nothing that matches:** report `doctor.next` in one line, offer to do
 it, and stop. Do not pick a task for them because the pipeline looked idle.

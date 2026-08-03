@@ -1,7 +1,7 @@
 {
   "name": "career-kit",
-  "description": "Run a job search as a pipeline: one knowledge base as the source of truth, tailored applications, a gate that makes every irreversible send safe, ten job sources, and a local previewer you can edit in.",
-  "version": "0.2.0",
+  "description": "Run a job search as a pipeline: one knowledge base as the source of truth, tailored applications, a gate that makes every irreversible send safe, ten job sources, the whole pipeline on one filterable page, and a local previewer you can edit in.",
+  "version": "0.3.0",
   "author": {
     "name": "Marcin Walendowski",
     "url": "https://github.com/MarcinWalendowski"

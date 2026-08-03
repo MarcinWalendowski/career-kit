@@ -38,6 +38,11 @@ outputs/receipts/
 # Derived state. Rebuildable, and it leaks the shape of your search.
 # ---------------------------------------------------------------------------
 
+# The board, rebuilt from jobs/ by `career-board`. It is every company on one
+# page with what you did about each, which is the same disclosure as career.db
+# below and easier to open by accident, because it is a web page.
+outputs/board.html
+
 # The tracker DB, rebuilt from jobs/ by `career-review`. Publishing it publishes
 # every company you applied to, when, with what outcome, and your salary notes.
 # The -wal and -shm files hold recent writes that have not landed in the DB yet,

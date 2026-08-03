@@ -89,6 +89,13 @@ week's effort goes.
 Keep it to something readable in a minute. A weekly report nobody finishes is a weekly report that
 changes nothing.
 
+## When the answer is a page, not a paragraph
+
+This skill answers "what needs me today". When the user wants to read *through* the pipeline instead
+of being told about it, that is **career-board**: the same records on one filterable page, sorted by
+what needs a person first. Hand off rather than listing thirty roles in prose. A digest that turns
+into a wall of rows is the failure mode this section exists to prevent.
+
 ## Guardrails
 
 - Report a stalled lease as stalled. Do not release one to make the digest look clean.
