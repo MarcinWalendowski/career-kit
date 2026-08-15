@@ -29,3 +29,6 @@ knowledge-base.md
 # node
 node_modules/
 npm-debug.log*
+
+# cezar runtime state in this repo (runs, worktrees, launch-key)
+.ai/cezar/
